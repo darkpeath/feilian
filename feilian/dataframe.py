@@ -135,7 +135,9 @@ def save_dataframe(file: Union[str, 'pd.WriteBuffer[bytes]',  'pd.WriteBuffer[st
     else:
         raise IOError(f"Unknown file format: {file}")
 
-def iter_dataframe(data: pd.DataFrame, progress_bar=False) -> Iterable[Tuple[Hashable, pd.Series]]:
+def iter_dataframe(data: pd.DataFrame,
+                   progress_bar: Union[bool, str, 'tqdm', Callable[[Iterable[Any]], 'tqdm']] = False
+                   ) -> Iterable[Tuple[Hashable, pd.Series]]:
     """
     iter dataframe rows, may show a progress bar
     :param data:            dataframe
@@ -144,8 +146,16 @@ def iter_dataframe(data: pd.DataFrame, progress_bar=False) -> Iterable[Tuple[Has
     """
     rows = data.iterrows()
     if progress_bar:
-        import tqdm
-        rows = tqdm.tqdm(rows, total=len(data), desc=progress_bar if isinstance(progress_bar, str) else None)
+        from tqdm import tqdm
+        if isinstance(progress_bar, tqdm):
+            progress_bar.iterable = rows
+            rows = progress_bar
+        elif isinstance(progress_bar, str):
+            rows = tqdm(rows, total=len(data), desc=progress_bar)
+        elif callable(progress_bar):
+            rows = progress_bar(rows)
+        else:
+            rows = tqdm(rows, total=len(data))
     return rows
 
 def extract_dataframe_sample(data: pd.DataFrame,
