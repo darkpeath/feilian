@@ -19,9 +19,15 @@ if pd_version[0] < 1 or (pd_version[0] == 1 and pd_version[1] < 5):
 
 def read_dataframe(file: str, *args, sheet_name=0,
                    file_format: Literal['csv', 'tsv', 'json', 'xlsx'] = None,
-                   line_delimited_json_format=False, **kwargs) -> Union[pd.DataFrame, Dict[str, pd.DataFrame]]:
+                   jsonl=False, **kwargs) -> Union[pd.DataFrame, Dict[str, pd.DataFrame]]:
     """
     read file as pandas `DataFrame`
+    :param file:        the file to be read
+    :param args:        extra args for `pd.read_xx()`
+    :param sheet_name:      `sheet_name` for `pd.read_excel()`
+    :param file_format:     csv, tsv, json ,xlsx
+    :param jsonl:           jsonl format or not, only used in json format
+    :param kwargs:      extra kwargs for `pd.read_xx()`
     """
     # decide the file format
     if not file_format:
@@ -29,8 +35,9 @@ def read_dataframe(file: str, *args, sheet_name=0,
             raise ValueError("Format should given!")
         file_format = os.path.splitext(file)[1].lower()[1:]
 
-    if 'lines' in kwargs and kwargs.pop('lines'):
-        line_delimited_json_format = True
+    for key in ['lines', 'line_delimited_json_format']:
+        if key in kwargs and kwargs.pop(key):
+            jsonl = True
 
     # if the file format is tsv, actually same as csv
     if file_format == 'tsv':
@@ -44,7 +51,7 @@ def read_dataframe(file: str, *args, sheet_name=0,
     elif file_format == 'xlsx':
         return pd.read_excel(file, *args, sheet_name=sheet_name, **kwargs)
     elif file_format == 'json':
-        return pd.read_json(file, *args, lines=line_delimited_json_format, **kwargs)
+        return pd.read_json(file, *args, lines=jsonl, **kwargs)
     else:
         raise IOError(f"Unknown file format: {file}")
 
@@ -55,28 +62,28 @@ def save_dataframe(file: Union[str, 'pd.WriteBuffer[bytes]',  'pd.WriteBuffer[st
                    index=False, index_label=None,
                    encoding='utf-8', newline='\n',
                    force_ascii=False,
-                   orient='records', line_delimited_json_format=True,
+                   orient='records', jsonl=True,
                    column_mapper: Union[Dict[str, str], Sequence[str]] = None,
                    include_columns: Sequence[str] = None,
                    exclude_columns: Sequence[str] = None,
                    **kwargs):
     """
     save data into file
-    :param file:                        where to save the data to
-    :param df:                          the data
-    :param args:                        extra args for df.to_xx()
-    :param file_format:                 file format：csv, json, xlsx
-    :param index:                       save index or not, see docs in df.to_csv()
-    :param index_label:                 header for the index when `index` is `True`
-    :param encoding:                    text file encoding
-    :param newline:                     text file newline
-    :param force_ascii:                 `force_ascii` for json format
-    :param orient:                      `orient` for json format
-    :param line_delimited_json_format:  jsonl format or not
-    :param column_mapper:               rename columns; if set, columns not list here will be ignored
-    :param include_columns:             if set, columns not list here will be ignored
-    :param exclude_columns:             if set, columns list here will be ignored
-    :param kwargs:                      extra kwargs for df.to_xx()
+    :param file:                where to save the data to
+    :param df:                  the data
+    :param args:                extra args for df.to_xx()
+    :param file_format:         csv, tsv, json, xlsx
+    :param index:               save index or not, see docs in df.to_csv()
+    :param index_label:         header for the index when `index` is `True`
+    :param encoding:            text file encoding
+    :param newline:             text file newline
+    :param force_ascii:         `force_ascii` for json format
+    :param orient:              `orient` for json format
+    :param jsonl:               jsonl format or not
+    :param column_mapper:       rename columns; if set, columns not list here will be ignored
+    :param include_columns:     if set, columns not list here will be ignored
+    :param exclude_columns:     if set, columns list here will be ignored
+    :param kwargs:              extra kwargs for df.to_xx()
     """
     # decide file format
     if not file_format:
@@ -90,6 +97,10 @@ def save_dataframe(file: Union[str, 'pd.WriteBuffer[bytes]',  'pd.WriteBuffer[st
     # convert data to be a dataframe
     if not isinstance(df, pd.DataFrame):
         df = pd.DataFrame(df)
+
+    for key in ['lines', 'line_delimited_json_format']:
+        if key in kwargs and kwargs.pop(key):
+            jsonl = True
 
     # deal with columns
     if column_mapper:
@@ -115,11 +126,11 @@ def save_dataframe(file: Union[str, 'pd.WriteBuffer[bytes]',  'pd.WriteBuffer[st
     elif file_format == 'xlsx':
         df.to_excel(file, *args, index=index, index_label=index_label, **kwargs)
     elif file_format == 'json':
-        if line_delimited_json_format:
+        if jsonl:
             orient = 'records'
             index = True
         df.to_json(file, *args, index=index, force_ascii=force_ascii,
-                   orient=orient, lines=line_delimited_json_format,
+                   orient=orient, lines=jsonl,
                    **kwargs)
     else:
         raise IOError(f"Unknown file format: {file}")
