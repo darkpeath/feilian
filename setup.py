@@ -3,7 +3,6 @@
 import os
 import io
 from setuptools import setup, find_packages
-from feilian import __version__
 
 NAME = "feilian"
 DESCRIPTION = "General data processing tool."
@@ -25,7 +24,6 @@ except IOError:
 
 setup(
     name=NAME,
-    version=__version__,
     description=DESCRIPTION,
     long_description=LONG_DESCRIPTION,
     long_description_content_type='text/markdown',
@@ -39,4 +37,6 @@ setup(
     extras_require={"extra": EXTRA_REQUIRES},
     tests_require=["pytest"],
     scripts=[],
+    use_scm_version=True,
+    setup_requires=['setuptools_scm'],
 )
