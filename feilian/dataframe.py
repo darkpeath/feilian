@@ -6,6 +6,8 @@ Encapsulate methods for pandas `DataFrame`.
 
 from typing import Union, Iterable, Dict, Literal, List, Any, Sequence, Callable, Tuple, Hashable
 import os
+import warnings
+
 import pandas as pd
 import random
 import collections
@@ -75,7 +77,8 @@ def save_dataframe(file: Union[str, 'pd.WriteBuffer[bytes]',  'pd.WriteBuffer[st
     :param df:                  the data
     :param args:                extra args for df.to_xx()
     :param file_format:         csv, tsv, json, xlsx
-    :param index:               save index or not, see docs in df.to_csv()
+    :param index:               save index or not, see docs in df.to_csv();
+                                if set as str and `index_label` not set, `index_label` will be set as this
     :param index_label:         header for the index when `index` is `True`
     :param encoding:            text file encoding
     :param newline:             text file newline
@@ -115,6 +118,10 @@ def save_dataframe(file: Union[str, 'pd.WriteBuffer[bytes]',  'pd.WriteBuffer[st
     # ensure parent dir exists
     if isinstance(file, (str, os.PathLike)):
         ensure_parent_dir_exist(file)
+
+    # compatible for set index just use arg `index`
+    if index_label is None and isinstance(index, str):
+        index, index_label = True, index
 
     # tsv is actually a csv
     if file_format == 'tsv':
