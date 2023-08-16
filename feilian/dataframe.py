@@ -19,14 +19,16 @@ if pd_version[0] < 1 or (pd_version[0] == 1 and pd_version[1] < 5):
 
 def read_dataframe(file: str, *args, sheet_name=0,
                    file_format: Literal['csv', 'tsv', 'json', 'xlsx'] = None,
-                   jsonl=False, **kwargs) -> Union[pd.DataFrame, Dict[str, pd.DataFrame]]:
+                   jsonl=False, dtype: pd._typing.DtypeArg = None,
+                   **kwargs) -> Union[pd.DataFrame, Dict[str, pd.DataFrame]]:
     """
     read file as pandas `DataFrame`
     :param file:        the file to be read
     :param args:        extra args for `pd.read_xx()`
     :param sheet_name:      `sheet_name` for `pd.read_excel()`
     :param file_format:     csv, tsv, json ,xlsx
-    :param jsonl:           jsonl format or not, only used in json format
+    :param jsonl:       jsonl format or not, only used in json format
+    :param dtype:       `dtype` for `pd.read_xx()`
     :param kwargs:      extra kwargs for `pd.read_xx()`
     """
     # decide the file format
@@ -47,11 +49,11 @@ def read_dataframe(file: str, *args, sheet_name=0,
         kwargs['delimiter'] = '\t'
 
     if file_format == 'csv':
-        return pd.read_csv(file, *args, **kwargs)
+        return pd.read_csv(file, *args, dtype=dtype, **kwargs)
     elif file_format == 'xlsx':
-        return pd.read_excel(file, *args, sheet_name=sheet_name, **kwargs)
+        return pd.read_excel(file, *args, sheet_name=sheet_name, dtype=dtype, **kwargs)
     elif file_format == 'json':
-        return pd.read_json(file, *args, lines=jsonl, **kwargs)
+        return pd.read_json(file, *args, lines=jsonl, dtype=dtype, **kwargs)
     else:
         raise IOError(f"Unknown file format: {file}")
 
