@@ -61,7 +61,7 @@ def read_dataframe(file: str, *args, sheet_name=0,
 
 def save_dataframe(file: Union[str, 'pd.WriteBuffer[bytes]',  'pd.WriteBuffer[str]'],
                    df: Union[pd.DataFrame, Iterable[Union[pd.Series, Dict[str, Any]]]],
-                   *args,
+                   *args, sheet_name='Sheet1',
                    file_format: Literal['csv', 'tsv', 'json', 'xlsx'] = None,
                    index=False, index_label=None,
                    encoding='utf-8', newline='\n',
@@ -76,6 +76,7 @@ def save_dataframe(file: Union[str, 'pd.WriteBuffer[bytes]',  'pd.WriteBuffer[st
     :param file:                where to save the data to
     :param df:                  the data
     :param args:                extra args for df.to_xx()
+    :param sheet_name:          `sheet_name` for excel format
     :param file_format:         csv, tsv, json, xlsx
     :param index:               save index or not, see docs in df.to_csv();
                                 if set as str and `index_label` not set, `index_label` will be set as this
@@ -133,7 +134,7 @@ def save_dataframe(file: Union[str, 'pd.WriteBuffer[bytes]',  'pd.WriteBuffer[st
         kwargs[PD_PARAM_NEWLINE] = newline
         df.to_csv(file, *args, index=index, index_label=index_label, encoding=encoding, **kwargs)
     elif file_format == 'xlsx':
-        df.to_excel(file, *args, index=index, index_label=index_label, **kwargs)
+        df.to_excel(file, *args, index=index, index_label=index_label, sheet_name=sheet_name, **kwargs)
     elif file_format == 'json':
         if jsonl:
             orient = 'records'
