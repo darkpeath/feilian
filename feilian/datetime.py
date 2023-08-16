@@ -16,5 +16,6 @@ def format_time(time: Union[str, int, float, datetime.datetime] = None, fmt='%Y-
             raise ValueError(f"Unexpected type: {type(time)}")
     return time.strftime(fmt)
 
-def format_date(date: Union[str, int, float, datetime.datetime] = None, sep='-') -> str:
+# when format a date, no sep is used more
+def format_date(date: Union[str, int, float, datetime.datetime] = None, sep='') -> str:
     return format_time(date, fmt=sep.join(['%Y', '%m', '%d']))
