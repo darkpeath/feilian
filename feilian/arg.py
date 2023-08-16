@@ -1,6 +1,26 @@
 # -*- coding: utf-8 -*-
 
-from typing import Union, List, Any, Iterable, Callable, Set, Optional, Tuple
+from typing import Union, List, Any, Iterable, Callable, Set, Optional, Tuple, Literal, Dict, Hashable
+
+_build_in_na_checkers = {
+    'always_na': lambda x: True,
+    'never_na': lambda x: False,
+    'is_none': lambda x: x is None,
+}
+_build_in_na_checker_args = Literal['always_na', 'never_na', 'is_none']
+
+_build_in_na_converters = {
+    'none': lambda x: None,
+    'self': lambda x: x,
+    'empty': lambda x: [],
+    'single': lambda x: [x],
+}
+_build_in_na_converter_args = Literal['none', 'self', 'empty', 'single']
+
+def _get_or_default(value: Any, mapping: Dict[Hashable, Any], default_key: Any) -> Any:
+    if value is None:
+        return mapping[default_key]
+    return mapping.get(value, value)
 
 class ArgValueParser(object):
     @classmethod
@@ -92,49 +112,67 @@ class ArgValueParser(object):
                                                  elem_type=elem_type, allowed_type=allowed_type)
 
     @staticmethod
-    def ensure_list(value: Any, allow_none=True) -> Optional[List[Any]]:
+    def ensure_collection(value: Any, expected_type: type, collection_type: Union[type, Tuple[type, ...]],
+                          na_checker: Union[Callable[[Any], bool], _build_in_na_checkers] = None,
+                          na_converter: Union[Callable[[Any], Any], _build_in_na_converter_args] = None) -> Any:
+        """
+        Ensure the value to be a list, tuple or set.
+        :param value:   any type value
+        :param expected_type:       expected return type, can be list, tuple or set
+        :param collection_type:     other collection type to be convert
+        :param na_checker:      check if `value` is na, default is 'is_none'
+                                str value means some built-in functions:
+                                    always_na:  always treat the value as na
+                                    never_na:   never treat the value as na
+                                    is_none:    test if the value is `None`
+        :param na_converter:    if `value` is na, return output of this function, default is 'self'
+                                str value means some built-in functions:
+                                    none:   `None`
+                                    self:   the value no changed
+                                    empty:  an empty list
+                                    single: a single value list: `[value]`
+        :return:    expected to be an instance of `expected_type`, or be `None` for some condition
+        """
+        na_checker = _get_or_default(na_checker, _build_in_na_checkers, 'is_none')
+        if na_checker(value):
+            na_converter = _get_or_default(na_converter, _build_in_na_converters, 'self')
+            return na_converter(value)
+        if isinstance(value, expected_type):
+            return value
+        if isinstance(value, collection_type):
+            return expected_type(value)
+        return expected_type([value])
+
+    @classmethod
+    def ensure_list(cls, value: Any, na_checker: Union[Callable[[Any], bool], _build_in_na_checkers] = None,
+                    na_converter: Union[Callable[[Any], Any], _build_in_na_converter_args] = None
+                    ) -> Optional[List[Any]]:
         """
         Ensure the value to be a list.
-        If value is `None`, return `None` if `allow_none` is `True`, else return `[None]`.
+        See more arg docs in `ensure_collection()`.
         """
-        if value is None and allow_none:
-            if allow_none:
-                return value
-            return [value]
-        if isinstance(value, list):
-            return value
-        if isinstance(value, (set, tuple)):
-            return list(value)
-        return [value]
+        return cls.ensure_collection(value, expected_type=list, collection_type=(tuple, set),
+                                     na_checker=na_checker, na_converter=na_converter)
 
-    @staticmethod
-    def ensure_tuple(value: Any, allow_none=True) -> Optional[Tuple[Any]]:
+    @classmethod
+    def ensure_tuple(cls, value: Any, na_checker: Union[Callable[[Any], bool], _build_in_na_checkers] = None,
+                     na_converter: Union[Callable[[Any], Any], _build_in_na_converter_args] = None
+                     ) -> Optional[Tuple[Any]]:
         """
         Ensure the value to be a tuple.
-        If value is `None`, return `None` if `allow_none` is `True`, else return `(None, )`.
+        See more arg docs in `ensure_collection()`.
         """
-        if value is None and allow_none:
-            if allow_none:
-                return value
-            return (value,)
-        if isinstance(value, tuple):
-            return value
-        if isinstance(value, (set, list)):
-            return tuple(value)
-        return (value,)
+        return cls.ensure_collection(value, expected_type=tuple, collection_type=(list, set),
+                                     na_checker=na_checker, na_converter=na_converter)
 
-    @staticmethod
-    def ensure_set(value: Any, allow_none=True) -> Optional[Set[Any]]:
+    @classmethod
+    def ensure_set(cls, value: Any, na_checker: Union[Callable[[Any], bool], _build_in_na_checkers] = None,
+                   na_converter: Union[Callable[[Any], Any], _build_in_na_converter_args] = None
+                   ) -> Optional[Set[Any]]:
         """
         Ensure the value to be a set.
-        If value is `None`, return `None` if `allow_none` is `True`, else return `{None}`.
+        See more arg docs in `ensure_collection()`.
         """
-        if value is None and allow_none:
-            if allow_none:
-                return value
-            return {value}
-        if isinstance(value, set):
-            return value
-        if isinstance(value, (tuple, list)):
-            return set(value)
-        return {value}
+        return cls.ensure_collection(value, expected_type=set, collection_type=(list, tuple),
+                                     na_checker=na_checker, na_converter=na_converter)
+
