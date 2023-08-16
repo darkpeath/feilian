@@ -7,7 +7,7 @@ _build_in_na_checkers = {
     'never_na': lambda x: False,
     'is_none': lambda x: x is None,
 }
-_build_in_na_checker_args = Literal['always_na', 'never_na', 'is_none']
+_NA_CHECKER_TYPES = Union[Callable[[Any], bool], Literal['always_na', 'never_na', 'is_none']]
 
 _build_in_na_converters = {
     'none': lambda x: None,
@@ -15,7 +15,7 @@ _build_in_na_converters = {
     'empty': lambda x: [],
     'single': lambda x: [x],
 }
-_build_in_na_converter_args = Literal['none', 'self', 'empty', 'single']
+_NA_CONVERTER_TYPES = Union[Callable[[Any], Any], Literal['none', 'self', 'empty', 'single']]
 
 def _get_or_default(value: Any, mapping: Dict[Hashable, Any], default_key: Any) -> Any:
     if value is None:
@@ -113,8 +113,7 @@ class ArgValueParser(object):
 
     @staticmethod
     def ensure_collection(value: Any, expected_type: type, collection_type: Union[type, Tuple[type, ...]],
-                          na_checker: Union[Callable[[Any], bool], _build_in_na_checkers] = None,
-                          na_converter: Union[Callable[[Any], Any], _build_in_na_converter_args] = None) -> Any:
+                          na_checker: _NA_CHECKER_TYPES = None, na_converter: _NA_CONVERTER_TYPES = None) -> Any:
         """
         Ensure the value to be a list, tuple or set.
         :param value:   any type value
@@ -144,9 +143,8 @@ class ArgValueParser(object):
         return expected_type([value])
 
     @classmethod
-    def ensure_list(cls, value: Any, na_checker: Union[Callable[[Any], bool], _build_in_na_checkers] = None,
-                    na_converter: Union[Callable[[Any], Any], _build_in_na_converter_args] = None
-                    ) -> Optional[List[Any]]:
+    def ensure_list(cls, value: Any, na_checker: _NA_CHECKER_TYPES = None,
+                    na_converter: _NA_CONVERTER_TYPES = None) -> Optional[List[Any]]:
         """
         Ensure the value to be a list.
         See more arg docs in `ensure_collection()`.
@@ -155,9 +153,8 @@ class ArgValueParser(object):
                                      na_checker=na_checker, na_converter=na_converter)
 
     @classmethod
-    def ensure_tuple(cls, value: Any, na_checker: Union[Callable[[Any], bool], _build_in_na_checkers] = None,
-                     na_converter: Union[Callable[[Any], Any], _build_in_na_converter_args] = None
-                     ) -> Optional[Tuple[Any]]:
+    def ensure_tuple(cls, value: Any, na_checker: _NA_CHECKER_TYPES = None,
+                     na_converter: _NA_CONVERTER_TYPES = None) -> Optional[Tuple[Any]]:
         """
         Ensure the value to be a tuple.
         See more arg docs in `ensure_collection()`.
@@ -166,9 +163,8 @@ class ArgValueParser(object):
                                      na_checker=na_checker, na_converter=na_converter)
 
     @classmethod
-    def ensure_set(cls, value: Any, na_checker: Union[Callable[[Any], bool], _build_in_na_checkers] = None,
-                   na_converter: Union[Callable[[Any], Any], _build_in_na_converter_args] = None
-                   ) -> Optional[Set[Any]]:
+    def ensure_set(cls, value: Any, na_checker: _NA_CHECKER_TYPES = None,
+                   na_converter: _NA_CONVERTER_TYPES = None) -> Optional[Set[Any]]:
         """
         Ensure the value to be a set.
         See more arg docs in `ensure_collection()`.
