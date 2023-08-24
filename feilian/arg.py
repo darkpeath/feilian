@@ -1,6 +1,10 @@
 # -*- coding: utf-8 -*-
 
-from typing import Union, List, Any, Iterable, Callable, Set, Optional, Tuple, Literal, Dict, Hashable
+from typing import Union, List, Any, Iterable, Callable, Set, Optional, Tuple, Dict, Hashable
+try:
+    from typing import Literal
+except ImportError:
+    from typing_extensions import Literal
 
 _build_in_na_checkers = {
     'always_na': lambda x: True,

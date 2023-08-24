@@ -4,10 +4,13 @@
 Encapsulate methods for pandas `DataFrame`.
 """
 
-from typing import Union, Iterable, Dict, Literal, List, Any, Sequence, Callable, Tuple, Hashable
-import os
-import warnings
+from typing import Union, Iterable, Dict, List, Any, Sequence, Callable, Tuple, Hashable
+try:
+    from typing import Literal
+except ImportError:
+    from typing_extensions import Literal
 
+import os
 import pandas as pd
 import random
 import collections
