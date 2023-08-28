@@ -1,3 +1,5 @@
 #!/usr/bin/env bash
 
-python setup.py sdist bdist_wheel
+python -m pip install --upgrade pip
+python -m pip install --upgrade build wheel
+python -m build
