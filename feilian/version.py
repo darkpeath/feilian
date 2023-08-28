@@ -7,6 +7,10 @@ except ImportError:
         from importlib_metadata import version, PackageNotFoundError
         __version__ = version("feilian")
     except PackageNotFoundError:
-        # package is not installed
-        __version__ = "UNKNOWN"
+        from importlib.metadata import version, PackageNotFoundError
+        try:
+            __version__ = version('feilian')
+        except PackageNotFoundError:
+            # package is not installed
+            __version__ = "UNKNOWN"
     VERSION = __version__.split('.')

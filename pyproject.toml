@@ -6,7 +6,11 @@ build-backend = "setuptools.build_meta"
 name = "feilian"
 dynamic = ["version"]
 description = "General data processing tool."
+<<<<<<< HEAD
 readme = "README.md"
+=======
+readme = "RAEDME.md"
+>>>>>>> 2c9fb3bff11a8472a9c5067e915056ed265e72fc
 authors = [
     {name = "darkpeath", email = "darkpeath@gmail.com"}
 ]
