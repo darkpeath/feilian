@@ -1,10 +1,4 @@
 setuptools>=42
-<<<<<<< HEAD
 setuptools_scm[toml]>=3.4
 pandas
 tqdm
-=======
-setuptools_scm>=3.4
-pandas
-tqdm
->>>>>>> 2c9fb3bff11a8472a9c5067e915056ed265e72fc
