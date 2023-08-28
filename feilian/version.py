@@ -3,14 +3,10 @@
 try:
     from ._dist_ver import VERSION, __version__
 except ImportError:
+    from importlib.metadata import version, PackageNotFoundError
     try:
-        from importlib_metadata import version, PackageNotFoundError
-        __version__ = version("feilian")
+        __version__ = version('feilian')
     except PackageNotFoundError:
-        from importlib.metadata import version, PackageNotFoundError
-        try:
-            __version__ = version('feilian')
-        except PackageNotFoundError:
-            # package is not installed
-            __version__ = "UNKNOWN"
+        # package is not installed
+        __version__ = "UNKNOWN"
     VERSION = __version__.split('.')
