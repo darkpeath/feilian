@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from importlib.metadata import version, PackageNotFoundError
+from importlib_metadata import version, PackageNotFoundError
 
 try:
     __version__ = version("feilian")

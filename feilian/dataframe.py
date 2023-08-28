@@ -24,7 +24,7 @@ if pd_version[0] < 1 or (pd_version[0] == 1 and pd_version[1] < 5):
 
 def read_dataframe(file: str, *args, sheet_name=0,
                    file_format: Literal['csv', 'tsv', 'json', 'xlsx'] = None,
-                   jsonl=False, dtype: pd._typing.DtypeArg = None,
+                   jsonl=False, dtype: type = None,
                    **kwargs) -> Union[pd.DataFrame, Dict[str, pd.DataFrame]]:
     """
     read file as pandas `DataFrame`
