@@ -46,12 +46,16 @@ def read_dataframe(file: str, *args, sheet_name=0,
         if key in kwargs and kwargs.pop(key):
             jsonl = True
 
-    # if the file format is tsv, actually same as csv
+    # handle special formats
     if file_format == 'tsv':
+        # if the file format is tsv, actually same as csv
         file_format = 'csv'
         if 'sep' in kwargs:
             kwargs.pop('sep')
         kwargs['delimiter'] = '\t'
+    elif file_format == 'jsonl':
+        file_format = 'json'
+        jsonl = True
 
     if file_format == 'csv':
         return pd.read_csv(file, *args, dtype=dtype, **kwargs)
@@ -127,10 +131,14 @@ def save_dataframe(file: Union[str, 'pd.WriteBuffer[bytes]',  'pd.WriteBuffer[st
     if index_label is None and isinstance(index, str):
         index, index_label = True, index
 
-    # tsv is actually a csv
+    # handle special formats
     if file_format == 'tsv':
+        # tsv is actually a csv
         file_format = 'csv'
         kwargs['sep'] = '\t'
+    elif file_format == 'jsonl':
+        file_format = 'json'
+        jsonl = True
 
     # save to file for different format
     if file_format == 'csv':
