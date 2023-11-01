@@ -1,6 +1,10 @@
 # -*- coding: utf-8 -*-
 
-from typing import Union, List, Any, Iterable, Callable, Set, Optional, Tuple, Dict, Hashable
+from typing import (
+    Union, List, Any, Iterable,
+    Callable, Set, Optional, Tuple,
+    Dict, Hashable, Sequence,
+)
 try:
     from typing import Literal
 except ImportError:
@@ -28,12 +32,12 @@ def _get_or_default(value: Any, mapping: Dict[Hashable, Any], default_key: Any) 
 
 class ArgValueParser(object):
     @classmethod
-    def split_and_parse_strs(cls, strings: Union[List[str], str, None],
+    def split_and_parse_strs(cls, strings: Union[Sequence[str], str, None],
                              func: Callable[[str], Any] = None,
                              sep=',', do_trim=True, ignore_blank=True) -> Iterable[Any]:
         """
         split and parse multi string values
-        :param strings:  list of strings
+        :param strings:  sequence of strings
         :param func:     function to parse single string value
         :param sep:      seperator to split single string
         :param do_trim:  trim every word or not
@@ -51,7 +55,7 @@ class ArgValueParser(object):
                     yield func(x) if func else x
 
     @classmethod
-    def split_strs_to_set(cls, values: Union[List[str], str, None],
+    def split_strs_to_set(cls, values: Union[Sequence[str], str, None],
                           func: Callable[[str], Any] = None,
                           sep=',', do_trim=True, ignore_blank=True) -> Optional[Set[Any]]:
         """
@@ -60,7 +64,7 @@ class ArgValueParser(object):
         return set(cls.split_and_parse_strs(values, func, sep, do_trim, ignore_blank))
 
     @classmethod
-    def split_strs_to_list(cls, values: Union[List[str], str, None],
+    def split_strs_to_list(cls, values: Union[Sequence[str], str, None],
                            func: Callable[[str], Any] = None,
                            sep=',', do_trim=True, ignore_blank=True) -> Optional[List[Any]]:
         """
