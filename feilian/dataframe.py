@@ -22,8 +22,11 @@ pd_version = [int(x) for x in pd.__version__.split('.')]
 if pd_version[0] < 1 or (pd_version[0] == 1 and pd_version[1] < 5):
     PD_PARAM_NEWLINE = 'line_terminator'
 
+FILE_FORMAT = Literal['csv', 'tsv', 'json', 'xlsx', 'parquet']
+COMPRESSION_FORMAT = Literal[None, 'infer', 'snappy', 'gzip', 'brotli', 'bz2', 'zip', 'xz']
+
 def read_dataframe(file: str, *args, sheet_name=0,
-                   file_format: Literal['csv', 'tsv', 'json', 'xlsx'] = None,
+                   file_format: FILE_FORMAT = None,
                    jsonl=False, dtype: type = None,
                    **kwargs) -> Union[pd.DataFrame, Dict[str, pd.DataFrame]]:
     """
@@ -31,7 +34,7 @@ def read_dataframe(file: str, *args, sheet_name=0,
     :param file:        the file to be read
     :param args:        extra args for `pd.read_xx()`
     :param sheet_name:      `sheet_name` for `pd.read_excel()`
-    :param file_format:     csv, tsv, json ,xlsx
+    :param file_format:     csv, tsv, json ,xlsx, parquet
     :param jsonl:       jsonl format or not, only used in json format
     :param dtype:       `dtype` for `pd.read_xx()`
     :param kwargs:      extra kwargs for `pd.read_xx()`
@@ -63,13 +66,16 @@ def read_dataframe(file: str, *args, sheet_name=0,
         return pd.read_excel(file, *args, sheet_name=sheet_name, dtype=dtype, **kwargs)
     elif file_format == 'json':
         return pd.read_json(file, *args, lines=jsonl, dtype=dtype, **kwargs)
+    elif file_format == 'parquet':
+        return pd.read_parquet(file, *args, **kwargs)
     else:
         raise IOError(f"Unknown file format: {file}")
 
 def save_dataframe(file: Union[str, 'pd.WriteBuffer[bytes]',  'pd.WriteBuffer[str]'],
                    df: Union[pd.DataFrame, Iterable[Union[pd.Series, Dict[str, Any]]]],
                    *args, sheet_name='Sheet1',
-                   file_format: Literal['csv', 'tsv', 'json', 'xlsx'] = None,
+                   file_format: FILE_FORMAT = None,
+                   compression: COMPRESSION_FORMAT = None,
                    index=False, index_label=None,
                    encoding='utf-8', newline='\n',
                    force_ascii=False,
@@ -84,7 +90,9 @@ def save_dataframe(file: Union[str, 'pd.WriteBuffer[bytes]',  'pd.WriteBuffer[st
     :param df:                  the data
     :param args:                extra args for df.to_xx()
     :param sheet_name:          `sheet_name` for excel format
-    :param file_format:         csv, tsv, json, xlsx
+    :param file_format:         csv, tsv, json, xlsx, parquet
+    :param compression:         name of the compression to use.
+                                use `None` for no compression.
     :param index:               save index or not, see docs in df.to_csv();
                                 if set as str and `index_label` not set, `index_label` will be set as this
     :param index_label:         header for the index when `index` is `True`
@@ -143,16 +151,19 @@ def save_dataframe(file: Union[str, 'pd.WriteBuffer[bytes]',  'pd.WriteBuffer[st
     # save to file for different format
     if file_format == 'csv':
         kwargs[PD_PARAM_NEWLINE] = newline
-        df.to_csv(file, *args, index=index, index_label=index_label, encoding=encoding, **kwargs)
+        df.to_csv(file, *args, compression=compression, index=index, index_label=index_label,
+                  encoding=encoding, **kwargs)
     elif file_format == 'xlsx':
         df.to_excel(file, *args, index=index, index_label=index_label, sheet_name=sheet_name, **kwargs)
     elif file_format == 'json':
         if jsonl:
             orient = 'records'
             index = True
-        df.to_json(file, *args, index=index, force_ascii=force_ascii,
-                   orient=orient, lines=jsonl,
+        df.to_json(file, *args, compression=compression, index=index,
+                   force_ascii=force_ascii, orient=orient, lines=jsonl,
                    **kwargs)
+    elif file_format == 'parquet':
+        df.to_parquet(file, *args, compression=compression, index=index, **kwargs)
     else:
         raise IOError(f"Unknown file format: {file}")
 
