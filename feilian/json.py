@@ -4,10 +4,16 @@ from typing import Dict, List, Union, Any
 import json
 from .io import ensure_parent_dir_exist
 
-def read_json(filepath: str, jsonl=False, encoding='utf-8', **kwargs):
+def _is_jsonl(filepath: str, jsonl=None) -> bool:
+    if jsonl is None:
+        jsonl = filepath.lower().endswith('.jsonl')
+    return jsonl
+
+def read_json(filepath: str, jsonl=None, encoding='utf-8', **kwargs):
     """
     An agent for `json.load()` with some default value.
     """
+    jsonl = _is_jsonl(filepath, jsonl)
     with open(filepath, encoding=encoding) as f:
         if jsonl:
             return [json.loads(x) for x in f]
@@ -19,6 +25,7 @@ def save_json(filepath: str, data: Union[Dict[str, Any], List[Any]], jsonl=False
     """
     An agent for `json.dump()` with some default value.
     """
+    jsonl = _is_jsonl(filepath, jsonl)
     if jsonl and not isinstance(data, list):
         # data should be a list
         raise ValueError("data should be a list when save as jsonl format")
