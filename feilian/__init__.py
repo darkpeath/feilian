@@ -6,6 +6,7 @@ from .dataframe import is_empty_text, is_nonempty_text, is_blank_text, is_non_bl
 from .datetime import format_time, format_date
 from .arg import ArgValueParser
 from .json import read_json, save_json
+from .process import DataframeProcessor
 from .utils import flatten_dict
 from .version import __version__
 
@@ -16,6 +17,7 @@ __all__ = [
     'format_time', 'format_date',
     'ArgValueParser',
     'read_json', 'save_json',
+    'DataframeProcessor',
     'flatten_dict',
     '__version__',
 ]
