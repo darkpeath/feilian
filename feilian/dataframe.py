@@ -158,6 +158,7 @@ def save_dataframe(file: Union[str, 'pd.WriteBuffer[bytes]',  'pd.WriteBuffer[st
     elif file_format == 'json':
         if jsonl:
             orient = 'records'
+        if orient not in ['split', 'table']:
             index = True
         df.to_json(file, *args, compression=compression, index=index,
                    force_ascii=force_ascii, orient=orient, lines=jsonl,
