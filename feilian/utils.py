@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-from typing import Dict, Any, Union, Collection
+from typing import Dict, Any, Union, Collection, List
 
 def flatten_dict(data: Dict[str, Any], prefix="", joiner=".",
                  exclude: Union[None, str, Collection[str]] = None,
@@ -62,3 +62,21 @@ def flatten_dict(data: Dict[str, Any], prefix="", joiner=".",
 
     return res
 
+
+def flatten_list(data: List[Any], res: List[Any] = None) -> List[Any]:
+    """
+    Flatten nested list as a flat on layer list.
+    :param data:    a nested list
+    :param res:     the result flat layer list, create a new one if not given.
+    """
+    if res is None:
+        res = []
+
+    for x in data:
+        if isinstance(x, list):
+            # flatten recursively
+            flatten_list(x, res)
+        else:
+            res.append(x)
+
+    return res

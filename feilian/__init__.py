@@ -7,7 +7,7 @@ from .datetime import format_time, format_date
 from .arg import ArgValueParser
 from .json import read_json, save_json
 from .process import DataframeProcessor
-from .utils import flatten_dict
+from .utils import flatten_dict, flatten_list
 from .version import __version__
 
 __all__ = [
@@ -18,6 +18,6 @@ __all__ = [
     'ArgValueParser',
     'read_json', 'save_json',
     'DataframeProcessor',
-    'flatten_dict',
+    'flatten_dict', 'flatten_list',
     '__version__',
 ]
