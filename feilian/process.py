@@ -1,7 +1,7 @@
 import abc
 import tqdm
 import pandas as pd
-from typing import Any, Dict, Hashable
+from typing import Any, Dict, Hashable, List, Tuple, Union, Iterable
 from .dataframe import read_dataframe, save_dataframe
 
 class BaseProcessor(abc.ABC):
@@ -10,10 +10,25 @@ class BaseProcessor(abc.ABC):
     """
 
     @abc.abstractmethod
-    def read_data(self, filepath: str) -> Any:
+    def read_single_file(self, filepath: str) -> Any:
+        """
+        Actual method to read data from a single file.
+        """
+
+    def merge_input_data(self, data: Iterable[Any]) -> Any:
+        """
+        Merge data read from multi files.
+        """
+        return data
+
+    def read_data(self, filepath: Union[str, List[str], Tuple[str]]) -> Any:
         """
         Read data from input file.
         """
+        if isinstance(filepath, (list, tuple)):
+            return self.merge_input_data(self.read_single_file(x) for x in filepath)
+        else:
+            return self.read_single_file(filepath)
 
     @abc.abstractmethod
     def save_result(self, filepath: str, result: Any):
@@ -27,7 +42,7 @@ class BaseProcessor(abc.ABC):
         Process data and return result.
         """
 
-    def run(self, input_path: str, output_path: str = None, write_output=True):
+    def run(self, input_path: Union[str, List[str], Tuple[str]], output_path: str = None, write_output=True):
         """
         Read from a file, and save result to another file.
         :param input_path:      file with the data
@@ -40,12 +55,20 @@ class BaseProcessor(abc.ABC):
             self.save_result(output_path or input_path, result)
 
 class DataframeProcessor(BaseProcessor, abc.ABC):
-    def __init__(self, input_dtype=None, progress=False):
-        self.input_dtype = input_dtype
+    def __init__(self, input_dtype=None, progress=False, read_args: Dict[str, Any] = None):
         self.progress = progress
+        self.read_args = read_args or {}
+        if input_dtype is not None:
+            self.read_args['dtype'] = input_dtype
 
-    def read_data(self, filepath: str) -> pd.DataFrame:
-        return read_dataframe(filepath, dtype=self.input_dtype)
+    def read_single_file(self, filepath: str) -> pd.DataFrame:
+        return read_dataframe(filepath, **self.read_args)
+
+    def merge_input_data(self, data: Iterable[pd.DataFrame]) -> pd.DataFrame:
+        return pd.concat(data)
+
+    def read_data(self, filepath: Union[str, List[str], Tuple[str]]) -> pd.DataFrame:
+        return super().read_data(filepath)
 
     def save_result(self, filepath: str, result: pd.DataFrame):
         save_dataframe(filepath, result)
