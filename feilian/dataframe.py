@@ -25,9 +25,18 @@ if pd_version[0] < 1 or (pd_version[0] == 1 and pd_version[1] < 5):
 FILE_FORMAT = Literal['csv', 'tsv', 'json', 'xlsx', 'parquet']
 COMPRESSION_FORMAT = Literal[None, 'infer', 'snappy', 'gzip', 'brotli', 'bz2', 'zip', 'xz']
 
+def _drop_na_values(data: Union[pd.DataFrame, Dict[str, pd.DataFrame]], axis: Literal['columns', 'rows']):
+    if isinstance(data, pd.DataFrame):
+        data.dropna(axis=axis, how='all', inplace=True)
+    else:
+        assert isinstance(data, dict)
+        for df in data.values():
+            df.dropna(axis=axis, how='all', inplace=True)
+
 def read_dataframe(file: str, *args, sheet_name=0,
                    file_format: FILE_FORMAT = None,
                    jsonl=False, dtype: type = None,
+                   drop_na_columns=False, drop_na_rows=False,
                    **kwargs) -> Union[pd.DataFrame, Dict[str, pd.DataFrame]]:
     """
     read file as pandas `DataFrame`
@@ -37,6 +46,8 @@ def read_dataframe(file: str, *args, sheet_name=0,
     :param file_format:     csv, tsv, json ,xlsx, parquet
     :param jsonl:       jsonl format or not, only used in json format
     :param dtype:       `dtype` for `pd.read_xx()`
+    :param drop_na_columns:     drop column if all values of the column is na
+    :param drop_na_rows:        drop row if all values of the row is na
     :param kwargs:      extra kwargs for `pd.read_xx()`
     """
     # decide the file format
@@ -61,15 +72,22 @@ def read_dataframe(file: str, *args, sheet_name=0,
         jsonl = True
 
     if file_format == 'csv':
-        return pd.read_csv(file, *args, dtype=dtype, **kwargs)
+        df = pd.read_csv(file, *args, dtype=dtype, **kwargs)
     elif file_format == 'xlsx':
-        return pd.read_excel(file, *args, sheet_name=sheet_name, dtype=dtype, **kwargs)
+        df = pd.read_excel(file, *args, sheet_name=sheet_name, dtype=dtype, **kwargs)
     elif file_format == 'json':
-        return pd.read_json(file, *args, lines=jsonl, dtype=dtype, **kwargs)
+        df = pd.read_json(file, *args, lines=jsonl, dtype=dtype, **kwargs)
     elif file_format == 'parquet':
-        return pd.read_parquet(file, *args, **kwargs)
+        df = pd.read_parquet(file, *args, **kwargs)
     else:
         raise IOError(f"Unknown file format: {file}")
+
+    if drop_na_columns:
+        _drop_na_values(df, axis='columns')
+    if drop_na_rows:
+        _drop_na_values(df, axis='rows')
+
+    return df
 
 def save_dataframe(file: Union[str, 'pd.WriteBuffer[bytes]',  'pd.WriteBuffer[str]'],
                    df: Union[pd.DataFrame, Iterable[Union[pd.Series, Dict[str, Any]]]],
