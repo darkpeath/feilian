@@ -1,8 +1,14 @@
 import abc
 import tqdm
 import pandas as pd
-from typing import Any, Dict, Hashable, List, Tuple, Union, Iterable
-from .dataframe import read_dataframe, save_dataframe
+from typing import (
+    Any, Dict, Hashable, List,
+    Tuple, Union, Iterable, Optional,
+)
+from .dataframe import (
+    read_dataframe,
+    save_dataframe,
+)
 
 class BaseProcessor(abc.ABC):
     """
@@ -74,9 +80,10 @@ class DataframeProcessor(BaseProcessor, abc.ABC):
         save_dataframe(filepath, result)
 
     @abc.abstractmethod
-    def process_row(self, i: Hashable, row: pd.Series) -> Dict[str, Any]:
+    def process_row(self, i: Hashable, row: pd.Series) -> Optional[Dict[str, Any]]:
         """
         Process a single row of data.
+        :return:    if `None`, ignore this row
         """
 
     def process(self, data: pd.DataFrame) -> pd.DataFrame:
@@ -84,6 +91,7 @@ class DataframeProcessor(BaseProcessor, abc.ABC):
         if self.progress:
             desc = "process" if self.progress is True else self.progress
             bar = tqdm.tqdm(bar, total=len(data), desc=desc)
-        res = [self.process_row(i, row) for i, row in bar]
+        res = (self.process_row(i, row) for i, row in bar)
+        res = (x for x in res if x is not None)
         return pd.DataFrame(res)
 
