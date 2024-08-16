@@ -61,11 +61,13 @@ class BaseProcessor(abc.ABC):
             self.save_result(output_path or input_path, result)
 
 class DataframeProcessor(BaseProcessor, abc.ABC):
-    def __init__(self, input_dtype=None, progress=False, read_args: Dict[str, Any] = None):
+    def __init__(self, input_dtype=None, progress=False, read_args: Dict[str, Any] = None,
+                 write_args: Dict[str, Any] = None):
         self.progress = progress
         self.read_args = read_args or {}
         if input_dtype is not None:
             self.read_args['dtype'] = input_dtype
+        self.write_args = write_args or {}
 
     def read_single_file(self, filepath: str) -> pd.DataFrame:
         return read_dataframe(filepath, **self.read_args)
@@ -77,7 +79,7 @@ class DataframeProcessor(BaseProcessor, abc.ABC):
         return super().read_data(filepath)
 
     def save_result(self, filepath: str, result: pd.DataFrame):
-        save_dataframe(filepath, result)
+        save_dataframe(filepath, result, **self.write_args)
 
     @abc.abstractmethod
     def process_row(self, i: Hashable, row: pd.Series) -> Optional[Dict[str, Any]]:
