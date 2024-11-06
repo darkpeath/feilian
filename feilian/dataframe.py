@@ -97,7 +97,7 @@ def save_dataframe(file: Union[str, 'pd.WriteBuffer[bytes]',  'pd.WriteBuffer[st
                    index=False, index_label=None,
                    encoding='utf-8', newline='\n',
                    force_ascii=False,
-                   orient='records', jsonl=True,
+                   orient='records', jsonl=True, indent=None,
                    column_mapper: Union[Dict[str, str], Sequence[str]] = None,
                    include_columns: Sequence[str] = None,
                    exclude_columns: Sequence[str] = None,
@@ -119,6 +119,7 @@ def save_dataframe(file: Union[str, 'pd.WriteBuffer[bytes]',  'pd.WriteBuffer[st
     :param force_ascii:         `force_ascii` for json format
     :param orient:              `orient` for json format
     :param jsonl:               jsonl format or not
+    :param indent:              indent for json format
     :param column_mapper:       rename columns; if set, columns not list here will be ignored
     :param include_columns:     if set, columns not list here will be ignored
     :param exclude_columns:     if set, columns list here will be ignored
@@ -180,7 +181,7 @@ def save_dataframe(file: Union[str, 'pd.WriteBuffer[bytes]',  'pd.WriteBuffer[st
             index = True
         df.to_json(file, *args, compression=compression, index=index,
                    force_ascii=force_ascii, orient=orient, lines=jsonl,
-                   **kwargs)
+                   indent=indent, **kwargs)
     elif file_format == 'parquet':
         df.to_parquet(file, *args, compression=compression, index=index, **kwargs)
     else:
