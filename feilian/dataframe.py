@@ -76,7 +76,14 @@ def read_dataframe(file: str, *args, sheet_name=0,
     elif file_format == 'xlsx':
         df = pd.read_excel(file, *args, sheet_name=sheet_name, dtype=dtype, **kwargs)
     elif file_format == 'json':
-        df = pd.read_json(file, *args, lines=jsonl, dtype=dtype, **kwargs)
+        try:
+            df = pd.read_json(file, *args, lines=jsonl, dtype=dtype, **kwargs)
+        except Exception as e:
+            # if failed, try again with different arg `lines`
+            try:
+                df = pd.read_json(file, *args, lines=not jsonl, dtype=dtype, **kwargs)
+            except Exception:
+                raise e
     elif file_format == 'parquet':
         df = pd.read_parquet(file, *args, **kwargs)
     else:
