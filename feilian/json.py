@@ -4,6 +4,16 @@ from typing import Dict, List, Union, Any
 import json
 from .io import ensure_parent_dir_exist
 
+def _read_json(filepath: str, jsonl: bool, encoding='utf-8', **kwargs):
+    """
+    The actual read function.
+    """
+    with open(filepath, encoding=encoding) as f:
+        if jsonl:
+            return [json.loads(x, **kwargs) for x in f]
+        else:
+            return json.load(f, **kwargs)
+
 def _is_jsonl(filepath: str, jsonl=None) -> bool:
     if jsonl is None:
         jsonl = filepath.lower().endswith('.jsonl')
@@ -14,11 +24,14 @@ def read_json(filepath: str, jsonl=None, encoding='utf-8', **kwargs):
     An agent for `json.load()` with some default value.
     """
     jsonl = _is_jsonl(filepath, jsonl)
-    with open(filepath, encoding=encoding) as f:
-        if jsonl:
-            return [json.loads(x) for x in f]
-        else:
-            return json.load(f, **kwargs)
+    try:
+        return _read_json(filepath, jsonl=jsonl, encoding=encoding, **kwargs)
+    except Exception as e:
+        # if failed, try again with different arg `jsonl`
+        try:
+            return _read_json(filepath, jsonl=not jsonl, encoding=encoding, **kwargs)
+        except Exception:
+            raise e
 
 def save_json(filepath: str, data: Union[Dict[str, Any], List[Any]], jsonl=False,
               encoding='utf-8', newline='\n', indent=2, ensure_ascii=False, **kwargs):
