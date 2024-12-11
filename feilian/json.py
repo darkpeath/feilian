@@ -19,7 +19,7 @@ def _is_jsonl(filepath: str, jsonl=None) -> bool:
         jsonl = filepath.lower().endswith('.jsonl')
     return jsonl
 
-def read_json(filepath: str, jsonl=None, encoding='utf-8', **kwargs):
+def read_json(filepath: str, jsonl=None, encoding='utf-8', **kwargs) -> Union[Dict[str, Any], List[Any]]:
     """
     An agent for `json.load()` with some default value.
     """
