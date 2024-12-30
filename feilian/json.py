@@ -33,7 +33,7 @@ def read_json(filepath: str, jsonl=None, encoding='utf-8', **kwargs) -> Union[Di
         except Exception:
             raise e
 
-def save_json(filepath: str, data: Union[Dict[str, Any], List[Any]], jsonl=False,
+def save_json(filepath: str, data: Union[Dict[str, Any], List[Any]], jsonl=None,
               encoding='utf-8', newline='\n', indent=2, ensure_ascii=False, **kwargs):
     """
     An agent for `json.dump()` with some default value.
