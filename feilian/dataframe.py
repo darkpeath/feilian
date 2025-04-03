@@ -9,8 +9,8 @@ try:
     from typing import Literal
 except ImportError:
     from typing_extensions import Literal
-
 import os
+import pathlib
 import pandas as pd
 import random
 import collections
@@ -33,7 +33,20 @@ def _drop_na_values(data: Union[pd.DataFrame, Dict[str, pd.DataFrame]], axis: Li
         for df in data.values():
             df.dropna(axis=axis, how='all', inplace=True)
 
-def read_dataframe(file: str, *args, sheet_name=0,
+def _infer_file_format(file) -> str:
+    if isinstance(file, str):
+        return os.path.splitext(file)[1].lower()[1:]
+    elif isinstance(file, pathlib.PurePath):
+        suf = file.suffix
+        return suf[1:] if suf.startswith('.') else suf
+    elif isinstance(file, os.PathLike):
+        return os.path.splitext(str(file))[1].lower()[1:]
+    elif isinstance(file, pd.ExcelWriter):
+        return 'xlsx'
+    else:
+        raise ValueError(f"Cannot infer format for type: {type(file)}")
+
+def read_dataframe(file: str | os.PathLike, *args, sheet_name=0,
                    file_format: FILE_FORMAT = None,
                    jsonl=False, dtype: type = None,
                    drop_na_columns=False, drop_na_rows=False,
@@ -52,9 +65,7 @@ def read_dataframe(file: str, *args, sheet_name=0,
     """
     # decide the file format
     if not file_format:
-        if not isinstance(file, str):
-            raise ValueError("Format should given!")
-        file_format = os.path.splitext(file)[1].lower()[1:]
+        file_format = _infer_file_format(file)
 
     for key in ['lines', 'line_delimited_json_format']:
         if key in kwargs and kwargs.pop(key):
@@ -96,7 +107,7 @@ def read_dataframe(file: str, *args, sheet_name=0,
 
     return df
 
-def save_dataframe(file: Union[str, 'pd.WriteBuffer[bytes]',  'pd.WriteBuffer[str]'],
+def save_dataframe(file: Union[str | os.PathLike, 'pd.WriteBuffer[bytes]',  'pd.WriteBuffer[str]'],
                    df: Union[pd.DataFrame, Iterable[Union[pd.Series, Dict[str, Any]]]],
                    *args, sheet_name='Sheet1',
                    file_format: FILE_FORMAT = None,
@@ -134,12 +145,7 @@ def save_dataframe(file: Union[str, 'pd.WriteBuffer[bytes]',  'pd.WriteBuffer[st
     """
     # decide file format
     if not file_format:
-        if isinstance(file, str):
-            file_format = os.path.splitext(file)[1].lower()[1:]
-        elif isinstance(file, pd.ExcelWriter):
-            file_format = 'xlsx'
-        else:
-            raise ValueError("Format should given!")
+        file_format = _infer_file_format(file)
 
     # convert data to be a dataframe
     if not isinstance(df, pd.DataFrame):
