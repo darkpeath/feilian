@@ -190,6 +190,7 @@ def save_dataframe(file: Union[str | os.PathLike, 'pd.WriteBuffer[bytes]',  'pd.
     elif file_format == 'json':
         if jsonl:
             orient = 'records'
+            indent = None
         if orient not in ['split', 'table']:
             index = True
         df.to_json(file, *args, compression=compression, index=index,
