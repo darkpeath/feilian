@@ -50,3 +50,8 @@ def save_json(filepath: str, data: Union[Dict[str, Any], List[Any]], jsonl=None,
                 f.write(newline)
         else:
             json.dump(data, f, indent=indent, ensure_ascii=ensure_ascii, **kwargs)
+
+def write_json(filepath: str, data: Union[Dict[str, Any], List[Any]], jsonl=None,
+               encoding='utf-8', newline='\n', indent=2, ensure_ascii=False, **kwargs):
+    save_json(filepath=filepath, data=data, jsonl=jsonl, encoding=encoding, newline=newline,
+              indent=indent, ensure_ascii=ensure_ascii, **kwargs)

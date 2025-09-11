@@ -59,3 +59,25 @@ def save_excel(file: _FILE_TYPES, df: _DATA_TYPES,
         exclude_columns=exclude_columns,
         **kwargs
     )
+
+def write_excel(
+    file: _FILE_TYPES, df: _DATA_TYPES,
+    *args, sheet_name='Sheet1',
+    header: Union[Sequence[str], bool] = True,
+    index=False, index_label=None,
+    column_mapper: Union[Dict[str, str], Sequence[str]] = None,
+    include_columns: Sequence[str] = None,
+    exclude_columns: Sequence[str] = None,
+    **kwargs
+):
+    save_excel(
+        file, df, *args,
+        sheet_name=sheet_name,
+        header=header,
+        index=index,
+        index_label=index_label,
+        column_mapper=column_mapper,
+        include_columns=include_columns,
+        exclude_columns=exclude_columns,
+        **kwargs
+    )
