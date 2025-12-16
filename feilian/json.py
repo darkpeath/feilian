@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 
 from typing import Dict, List, Union, Any
+from pathlib import Path
+import os
 import json
 from .io import ensure_parent_dir_exist
 
-def _read_json(filepath: str, jsonl: bool, encoding='utf-8', **kwargs):
+def _read_json(filepath: Union[str, os.PathLike], jsonl: bool, encoding='utf-8', **kwargs):
     """
     The actual read function.
     """
@@ -14,12 +16,18 @@ def _read_json(filepath: str, jsonl: bool, encoding='utf-8', **kwargs):
         else:
             return json.load(f, **kwargs)
 
-def _is_jsonl(filepath: str, jsonl=None) -> bool:
+def _is_jsonl(filepath: Union[str, os.PathLike], jsonl: bool = None) -> bool:
     if jsonl is None:
-        jsonl = filepath.lower().endswith('.jsonl')
+        filepath = Path(filepath)
+        jsonl = filepath.suffix.lower() == '.jsonl'
     return jsonl
 
-def read_json(filepath: str, jsonl=None, encoding='utf-8', **kwargs) -> Union[Dict[str, Any], List[Any]]:
+def read_json(
+    filepath: Union[str, os.PathLike],
+    jsonl: bool = None,
+    encoding: str = 'utf-8',
+    **kwargs
+) -> Union[Dict[str, Any], List[Any]]:
     """
     An agent for `json.load()` with some default value.
     """
@@ -33,8 +41,16 @@ def read_json(filepath: str, jsonl=None, encoding='utf-8', **kwargs) -> Union[Di
         except Exception:
             raise e
 
-def save_json(filepath: str, data: Union[Dict[str, Any], List[Any]], jsonl=None,
-              encoding='utf-8', newline='\n', indent=2, ensure_ascii=False, **kwargs):
+def save_json(
+    filepath: Union[str, os.PathLike],
+    data: Union[Dict[str, Any], List[Any]],
+    jsonl: bool = None,
+    encoding: str = 'utf-8',
+    newline: str = '\n',
+    indent: int = 2,
+    ensure_ascii: bool = False,
+    **kwargs
+):
     """
     An agent for `json.dump()` with some default value.
     """
@@ -51,7 +67,23 @@ def save_json(filepath: str, data: Union[Dict[str, Any], List[Any]], jsonl=None,
         else:
             json.dump(data, f, indent=indent, ensure_ascii=ensure_ascii, **kwargs)
 
-def write_json(filepath: str, data: Union[Dict[str, Any], List[Any]], jsonl=None,
-               encoding='utf-8', newline='\n', indent=2, ensure_ascii=False, **kwargs):
-    save_json(filepath=filepath, data=data, jsonl=jsonl, encoding=encoding, newline=newline,
-              indent=indent, ensure_ascii=ensure_ascii, **kwargs)
+def write_json(
+    filepath: Union[str, os.PathLike],
+    data: Union[Dict[str, Any], List[Any]],
+    jsonl: bool = None,
+    encoding: str = 'utf-8',
+    newline: str = '\n',
+    indent: int = 2,
+    ensure_ascii: bool = False,
+    **kwargs
+):
+    save_json(
+        filepath=filepath,
+        data=data,
+        jsonl=jsonl,
+        encoding=encoding,
+        newline=newline,
+        indent=indent,
+        ensure_ascii=ensure_ascii,
+        **kwargs
+    )
