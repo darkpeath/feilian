@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from typing import Dict, List, Union, Any
+from typing import Dict, List, Union, Any, Iterable
 from pathlib import Path
 import os
 import json
@@ -219,8 +219,20 @@ class BigJsonReader:
                     if cnt >= self.limit:
                         break
 
-def read_big_json(filepath: Union[str, os.PathLike]) -> BigJsonReader:
-    if ijson is None:
-        raise ImportError('ijson is not installed')
-    return BigJsonReader(filepath)
+def read_big_json(
+    filepath: Union[str, os.PathLike],
+    jsonl: bool = None,
+    encoding: str = 'utf-8',
+) -> Iterable[Any]:
+    jsonl = _is_jsonl(filepath, jsonl)
+    if jsonl:
+        with open(filepath, encoding=encoding) as f:
+            for line in f:
+                yield json.loads(line)
+    else:
+        if ijson is None:
+            raise ImportError('ijson is not installed')
+        reader = BigJsonReader(filepath)
+        for item in reader:
+            yield item
 
