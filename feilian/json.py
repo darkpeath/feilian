@@ -4,7 +4,12 @@ from typing import Dict, List, Union, Any
 from pathlib import Path
 import os
 import json
+from decimal import Decimal
 from .io import ensure_parent_dir_exist
+try:
+    import ijson
+except ImportError as e:
+    ijson = None
 
 def _read_json(filepath: Union[str, os.PathLike], jsonl: bool, encoding='utf-8', **kwargs):
     """
@@ -87,3 +92,135 @@ def write_json(
         ensure_ascii=ensure_ascii,
         **kwargs
     )
+
+
+class _JsonNode:
+    def __init__(self, type: str = '', parent: '_JsonNode' = None):
+        self._type = ''
+        self._value = None
+        self._parent = parent
+        if type:
+            self.type = type
+
+    def clear(self):
+        if self._type == 'map':
+            self._value.clear()
+        elif self._type == 'array':
+            self._value.clear()
+
+    @property
+    def parent(self):
+        return self._parent
+
+    @property
+    def type(self):
+        return self._type
+
+    @type.setter
+    def type(self, value):
+        if self._type:
+            raise ValueError('type is already set')
+        self._type = value
+        if value == 'map':
+            self._value = {}
+        elif value == 'array':
+            self._value = []
+
+    @property
+    def value(self):
+        if not self._type:
+            raise ValueError('type is not set')
+        if self._type == 'dummy':
+            assert isinstance(self._value, _JsonNode)
+            return self._value.value
+        if self._type == 'map':
+            assert isinstance(self._value, dict)
+            return {k: v.value for k, v in self._value.items()}
+        if self._type == 'array':
+            assert isinstance(self._value, list)
+            return [v.value for v in self._value]
+        return self._value
+
+    @value.setter
+    def value(self, value):
+        if not self._type:
+            raise ValueError('type is not set')
+        if self._type in ['dummy', 'map', 'array']:
+            raise RuntimeError('cannot set value for dummy, map, array')
+        self._value = value
+
+    def __repr__(self):
+        return str(self.value)
+
+    def __str__(self):
+        return str(self.value)
+
+class BigJsonReader:
+    def __init__(self, filepath: Union[str, os.PathLike], limit: int = float('inf')):
+        self.filepath = filepath
+        self.limit = limit
+        self.data_type = ''     # dict or list
+
+    def __iter__(self):
+        with open(self.filepath, 'rb') as f:
+            parser = ijson.parse(f)
+            dummy = node = _JsonNode('')
+            cnt = 0
+            for prefix, event, value in parser:
+                if event == 'start_map':
+                    if node.type == 'array':
+                        child = _JsonNode(type='map', parent=node)
+                        node._value.append(child)
+                        node = child
+                    else:
+                        node.type = 'map'
+                elif event == 'end_map':
+                    node = node.parent
+                elif event == 'start_array':
+                    node.type = 'array'
+                elif event == 'end_array':
+                    node = node.parent
+                elif event == 'map_key':
+                    assert node.type == 'map', f"{event} {value} {prefix}"
+                    child = _JsonNode(parent=node)
+                    node._value[value] = child
+                    node = child
+                else:
+                    assert event in ['null', 'boolean', 'integer', 'double', 'number', 'string']
+                    if isinstance(value, Decimal):
+                        value = float(value)
+                    if node.type == 'array':
+                        child = _JsonNode(type=event, parent=node)
+                        child.value = value
+                        node._value.append(child)
+                    else:
+                        assert not node.type
+                        node.type = event
+                        node.value = value
+                        node = node.parent
+                if node == dummy and event not in ['start_map', 'start_array']:
+                    assert node.type in ['map', 'array']
+                    if node.type == 'map':
+                        value = node.value
+                        assert isinstance(value, dict)
+                        assert len(value) == 1
+                        k, v = list(value.items())[0]
+                        self.data_type = 'dict'
+                        yield k, v
+                        node.clear()
+                    elif node.type == 'array':
+                        value = node.value
+                        assert isinstance(value, list)
+                        assert len(value) == 1
+                        self.data_type = 'list'
+                        yield value[0]
+                        node.clear()
+                    cnt += 1
+                    if cnt >= self.limit:
+                        break
+
+def read_big_json(filepath: Union[str, os.PathLike]) -> BigJsonReader:
+    if ijson is None:
+        raise ImportError('ijson is not installed')
+    return BigJsonReader(filepath)
+
