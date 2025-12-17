@@ -3,6 +3,7 @@
 from typing import Dict, List, Union, Any, Iterable
 from pathlib import Path
 import os
+import abc
 import json
 from decimal import Decimal
 from .io import ensure_parent_dir_exist
@@ -155,12 +156,24 @@ class _JsonNode:
     def __str__(self):
         return str(self.value)
 
-class BigJsonReader:
-    def __init__(self, filepath: Union[str, os.PathLike], limit: int = float('inf')):
+class StreamJsonReader(abc.ABC):
+    """
+    Iterate over a json file.
+    """
+    def __init__(self, filepath: Union[str, os.PathLike], encoding: str = None, limit: int = float('inf')):
         self.filepath = filepath
+        self.encoding = encoding
         self.limit = limit
-        self.data_type = ''     # dict or list
+        self._data_type = ''  # dict or list
 
+    @property
+    def data_type(self):
+        return self._data_type
+
+    def __iter__(self):
+        raise NotImplementedError
+
+class BigJsonReader(StreamJsonReader):
     def __iter__(self):
         with open(self.filepath, 'rb') as f:
             parser = ijson.parse(f)
@@ -205,34 +218,42 @@ class BigJsonReader:
                         assert isinstance(value, dict)
                         assert len(value) == 1
                         k, v = list(value.items())[0]
-                        self.data_type = 'dict'
+                        self._data_type = 'dict'
                         yield k, v
                         node.clear()
                     elif node.type == 'array':
                         value = node.value
                         assert isinstance(value, list)
                         assert len(value) == 1
-                        self.data_type = 'list'
+                        self._data_type = 'list'
                         yield value[0]
                         node.clear()
                     cnt += 1
                     if cnt >= self.limit:
                         break
 
+class JsonlReader(StreamJsonReader):
+    @property
+    def data_type(self):
+        return 'list'
+
+    def __iter__(self):
+        with open(self.filepath, encoding=self.encoding) as f:
+            for i, line in enumerate(f, 1):
+                yield json.loads(line)
+                if i >= self.limit:
+                    break
+
 def read_big_json(
     filepath: Union[str, os.PathLike],
     jsonl: bool = None,
     encoding: str = 'utf-8',
-) -> Iterable[Any]:
+) -> StreamJsonReader:
     jsonl = _is_jsonl(filepath, jsonl)
     if jsonl:
-        with open(filepath, encoding=encoding) as f:
-            for line in f:
-                yield json.loads(line)
+        return JsonlReader(filepath, encoding=encoding)
     else:
         if ijson is None:
             raise ImportError('ijson is not installed')
-        reader = BigJsonReader(filepath)
-        for item in reader:
-            yield item
+        return BigJsonReader(filepath)
 
