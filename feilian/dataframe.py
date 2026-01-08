@@ -86,7 +86,7 @@ def read_dataframe(file: str | os.PathLike, *args, sheet_name=0,
 
     if encoding == 'auto' and file_format in ['csv', 'json']:
         if isinstance(file, (str, os.PathLike)):
-            encoding = get_file_encoding(file)
+            encoding = get_file_encoding(file, encoding=encoding)
         else:
             encoding = None
 
