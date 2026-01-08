@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 
-from typing import Dict, List, Union, Any, Iterable
+from typing import Dict, List, Union, Any
 from pathlib import Path
 import os
 import abc
 import json
 from decimal import Decimal
 from .io import ensure_parent_dir_exist
+from .txt import get_file_encoding
 try:
     import ijson
 except ImportError as e:
@@ -16,6 +17,7 @@ def _read_json(filepath: Union[str, os.PathLike], jsonl: bool, encoding='utf-8',
     """
     The actual read function.
     """
+    encoding = get_file_encoding(filepath, encoding=encoding)
     with open(filepath, encoding=encoding) as f:
         if jsonl:
             return [json.loads(x, **kwargs) for x in f]
@@ -31,7 +33,7 @@ def _is_jsonl(filepath: Union[str, os.PathLike], jsonl: bool = None) -> bool:
 def read_json(
     filepath: Union[str, os.PathLike],
     jsonl: bool = None,
-    encoding: str = 'utf-8',
+    encoding: str = 'auto',
     **kwargs
 ) -> Union[Dict[str, Any], List[Any]]:
     """
@@ -247,9 +249,10 @@ class JsonlReader(StreamJsonReader):
 def read_big_json(
     filepath: Union[str, os.PathLike],
     jsonl: bool = None,
-    encoding: str = 'utf-8',
+    encoding: str = 'auto',
 ) -> StreamJsonReader:
     jsonl = _is_jsonl(filepath, jsonl)
+    encoding = get_file_encoding(filepath, encoding=encoding)
     if jsonl:
         return JsonlReader(filepath, encoding=encoding)
     else:

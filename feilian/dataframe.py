@@ -15,6 +15,7 @@ import pandas as pd
 import random
 import collections
 from .io import ensure_parent_dir_exist
+from .txt import get_file_encoding
 
 # Compatible with different pandas versions
 PD_PARAM_NEWLINE = 'lineterminator'
@@ -47,7 +48,7 @@ def _infer_file_format(file) -> str:
         raise ValueError(f"Cannot infer format for type: {type(file)}")
 
 def read_dataframe(file: str | os.PathLike, *args, sheet_name=0,
-                   file_format: FILE_FORMAT = None,
+                   file_format: FILE_FORMAT = None, encoding='auto',
                    jsonl=False, dtype: type = None,
                    drop_na_columns=False, drop_na_rows=False,
                    **kwargs) -> Union[pd.DataFrame, Dict[str, pd.DataFrame]]:
@@ -57,6 +58,7 @@ def read_dataframe(file: str | os.PathLike, *args, sheet_name=0,
     :param args:        extra args for `pd.read_xx()`
     :param sheet_name:      `sheet_name` for `pd.read_excel()`
     :param file_format:     csv, tsv, json ,xlsx, parquet
+    :param encoding:    text file encoding
     :param jsonl:       jsonl format or not, only used in json format
     :param dtype:       `dtype` for `pd.read_xx()`
     :param drop_na_columns:     drop column if all values of the column is na
@@ -82,13 +84,19 @@ def read_dataframe(file: str | os.PathLike, *args, sheet_name=0,
         file_format = 'json'
         jsonl = True
 
+    if encoding == 'auto' and file_format in ['csv', 'json']:
+        if isinstance(file, (str, os.PathLike)):
+            encoding = get_file_encoding(file)
+        else:
+            encoding = None
+
     if file_format == 'csv':
-        df = pd.read_csv(file, *args, dtype=dtype, **kwargs)
+        df = pd.read_csv(file, *args, encoding=encoding, dtype=dtype, **kwargs)
     elif file_format == 'xlsx':
         df = pd.read_excel(file, *args, sheet_name=sheet_name, dtype=dtype, **kwargs)
     elif file_format == 'json':
         try:
-            df = pd.read_json(file, *args, lines=jsonl, dtype=dtype, **kwargs)
+            df = pd.read_json(file, *args, encoding=encoding, lines=jsonl, dtype=dtype, **kwargs)
         except Exception as e:
             # if failed, try again with different arg `lines`
             try:

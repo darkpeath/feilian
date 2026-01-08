@@ -6,7 +6,10 @@ from .dataframe import is_empty_text, is_nonempty_text, is_blank_text, is_non_bl
 from .datetime import format_time, format_date
 from .arg import ArgValueParser
 from .json import read_json, save_json, write_json, read_big_json
-from .txt import read_txt, save_txt, write_txt
+from .txt import (
+    get_file_encoding,
+    read_txt, save_txt, write_txt,
+)
 from .process import DataframeProcessor
 from .excel import save_excel, write_excel
 from .utils import flatten_dict, flatten_list
@@ -19,6 +22,7 @@ __all__ = [
     'format_time', 'format_date',
     'ArgValueParser',
     'read_json', 'save_json', 'write_json', 'read_big_json',
+    'get_file_encoding',
     'read_txt', 'save_txt', 'write_txt',
     'save_excel', 'write_excel',
     'DataframeProcessor',
