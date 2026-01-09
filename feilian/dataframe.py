@@ -3,7 +3,7 @@
 """
 Encapsulate methods for pandas `DataFrame`.
 """
-
+import io
 from typing import Union, Iterable, Dict, List, Any, Sequence, Callable, Tuple, Hashable
 try:
     from typing import Literal
@@ -15,7 +15,7 @@ import pandas as pd
 import random
 import collections
 from .io import ensure_parent_dir_exist
-from .txt import get_file_encoding
+from .txt import detect_stream_encoding, detect_file_encoding
 
 # Compatible with different pandas versions
 PD_PARAM_NEWLINE = 'lineterminator'
@@ -47,7 +47,7 @@ def _infer_file_format(file) -> str:
     else:
         raise ValueError(f"Cannot infer format for type: {type(file)}")
 
-def read_dataframe(file: str | os.PathLike, *args, sheet_name=0,
+def read_dataframe(file: str | os.PathLike | io.IOBase, *args, sheet_name=0,
                    file_format: FILE_FORMAT = None, encoding='auto',
                    jsonl=False, dtype: type = None,
                    drop_na_columns=False, drop_na_rows=False,
@@ -84,10 +84,16 @@ def read_dataframe(file: str | os.PathLike, *args, sheet_name=0,
         file_format = 'json'
         jsonl = True
 
+    # detect encoding
     if encoding == 'auto' and file_format in ['csv', 'json']:
         if isinstance(file, (str, os.PathLike)):
-            encoding = get_file_encoding(file, encoding=encoding)
+            encoding = detect_file_encoding(file)
+        elif isinstance(file, io.IOBase) and file.seekable():
+            tell = file.tell()
+            encoding = detect_stream_encoding(file)
+            file.seek(tell)
         else:
+            # read file may cause content change, so we cannot detect the encoding
             encoding = None
 
     if file_format == 'csv':

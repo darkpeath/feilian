@@ -1,14 +1,28 @@
 from typing import Union, Literal
 import os
+import io
 import chardet
 
-def detect_text_encoding(raw: bytes, should_rename_legacy=True) -> str:
-    return chardet.detect(raw, should_rename_legacy=should_rename_legacy).get('encoding')
+_DEFAULT_CHUNK_SIZE = 1024
 
-def detect_file_encoding(path: Union[str, os.PathLike], size=10000, should_rename_legacy=True) -> str:
+def detect_stream_encoding(stream: io.IOBase, chunk_size=_DEFAULT_CHUNK_SIZE, should_rename_legacy=True) -> str:
+    detector = chardet.UniversalDetector(should_rename_legacy=should_rename_legacy)
+    while True:
+        raw = stream.read(chunk_size)
+        if not raw:
+            break
+        detector.feed(raw)
+        if detector.done:
+            break
+    detector.close()
+    return detector.result.get('encoding')
+
+def detect_text_encoding(raw: bytes, chunk_size=_DEFAULT_CHUNK_SIZE, should_rename_legacy=True) -> str:
+    return detect_stream_encoding(io.BytesIO(raw), chunk_size=chunk_size, should_rename_legacy=should_rename_legacy)
+
+def detect_file_encoding(path: Union[str, os.PathLike], chunk_size=_DEFAULT_CHUNK_SIZE, should_rename_legacy=True) -> str:
     with open(path, 'rb') as f:
-        raw = f.read(size)
-    return detect_text_encoding(raw, should_rename_legacy=should_rename_legacy)
+        return detect_stream_encoding(f, chunk_size=chunk_size, should_rename_legacy=should_rename_legacy)
 
 def get_file_encoding(path: Union[str, os.PathLike], encoding: Union[None, Literal['auto'], str] = None) -> str:
     if encoding == 'auto':
@@ -19,7 +33,7 @@ def read_txt(path: Union[str, os.PathLike], encoding: Union[None, Literal['auto'
     if encoding == 'auto':
         with open(path, 'rb') as f:
             raw = f.read()
-        encoding = detect_text_encoding(raw)
+        encoding = detect_stream_encoding(io.BytesIO(raw))
         return raw.decode(encoding)
     with open(path, 'r', encoding=encoding) as f:
         return f.read()
