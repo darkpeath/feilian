@@ -35,15 +35,15 @@ def _drop_na_values(data: Union[pd.DataFrame, Dict[str, pd.DataFrame]], axis: Li
             df.dropna(axis=axis, how='all', inplace=True)
 
 def _infer_file_format(file) -> str:
-    if isinstance(file, str):
+    if isinstance(file, pd.ExcelWriter):
+        return 'xlsx'
+    elif isinstance(file, str):
         return os.path.splitext(file)[1].lower()[1:]
     elif isinstance(file, pathlib.PurePath):
         suf = file.suffix
         return suf[1:] if suf.startswith('.') else suf
     elif isinstance(file, os.PathLike):
-        return os.path.splitext(str(file))[1].lower()[1:]
-    elif isinstance(file, pd.ExcelWriter):
-        return 'xlsx'
+        return os.path.splitext(os.fspath(file))[1].lower().lstrip('.')
     else:
         raise ValueError(f"Cannot infer format for type: {type(file)}")
 
