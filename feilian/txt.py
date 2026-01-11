@@ -1,12 +1,20 @@
 from ._typing import Union, Literal
 import os
 import io
+import inspect
 import chardet
 
 _DEFAULT_CHUNK_SIZE = 1024
 
+if 'should_rename_legacy' in inspect.signature(chardet.UniversalDetector).parameters:
+    def _create_detector(should_rename_legacy: bool):
+        return chardet.UniversalDetector(should_rename_legacy=should_rename_legacy)
+else:
+    def _create_detector(should_rename_legacy: bool):
+        return chardet.UniversalDetector()
+
 def detect_stream_encoding(stream: io.IOBase, chunk_size=_DEFAULT_CHUNK_SIZE, should_rename_legacy=True) -> str:
-    detector = chardet.UniversalDetector(should_rename_legacy=should_rename_legacy)
+    detector = _create_detector(should_rename_legacy=should_rename_legacy)
     while True:
         raw = stream.read(chunk_size)
         if not raw:
