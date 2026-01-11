@@ -1,7 +1,7 @@
 import abc
 import tqdm
 import pandas as pd
-from typing import (
+from ._typing import (
     Any, Dict, Hashable, List,
     Tuple, Union, Iterable, Optional,
 )

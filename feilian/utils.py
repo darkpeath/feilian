@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-from typing import Dict, Any, Union, Collection, List
+from ._typing import Dict, Any, Union, Collection, List
 
 def flatten_dict(data: Dict[str, Any], prefix="", joiner=".",
                  exclude: Union[None, str, Collection[str]] = None,

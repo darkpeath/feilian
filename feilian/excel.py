@@ -1,5 +1,5 @@
 import pandas as pd
-from typing import Union, Iterable, Dict, Sequence, Any, List, Tuple
+from ._typing import Union, Iterable, Dict, Sequence, Any, List, Tuple
 from .dataframe import save_dataframe
 
 def _save_excel(file, df, *args, **kwargs):

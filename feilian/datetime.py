@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from typing import Union
+from ._typing import Union
 import pandas as pd
 import datetime
 

@@ -3,17 +3,14 @@
 """
 Encapsulate methods for pandas `DataFrame`.
 """
+
 import io
-from typing import Union, Iterable, Dict, List, Any, Sequence, Callable, Tuple, Hashable
-try:
-    from typing import Literal
-except ImportError:
-    from typing_extensions import Literal
 import os
 import pathlib
 import pandas as pd
 import random
 import collections
+from ._typing import Union, Iterable, Dict, List, Any, Sequence, Callable, Tuple, Hashable, Literal
 from .io import ensure_parent_dir_exist
 from .txt import detect_stream_encoding, detect_file_encoding
 
@@ -47,7 +44,7 @@ def _infer_file_format(file) -> str:
     else:
         raise ValueError(f"Cannot infer format for type: {type(file)}")
 
-def read_dataframe(file: str | os.PathLike | io.IOBase, *args, sheet_name=0,
+def read_dataframe(file: Union[str, os.PathLike, io.IOBase], *args, sheet_name=0,
                    file_format: FILE_FORMAT = None, encoding='auto',
                    jsonl=False, dtype: type = None,
                    drop_na_columns=False, drop_na_rows=False,
@@ -121,7 +118,7 @@ def read_dataframe(file: str | os.PathLike | io.IOBase, *args, sheet_name=0,
 
     return df
 
-def save_dataframe(file: Union[str | os.PathLike, 'pd.WriteBuffer[bytes]',  'pd.WriteBuffer[str]'],
+def save_dataframe(file: Union[str, os.PathLike, 'pd.WriteBuffer[bytes]',  'pd.WriteBuffer[str]'],
                    df: Union[pd.DataFrame, Iterable[Union[pd.Series, Dict[str, Any]]]],
                    *args, sheet_name='Sheet1',
                    file_format: FILE_FORMAT = None,

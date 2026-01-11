@@ -1,4 +1,4 @@
-from typing import Union, Literal
+from ._typing import Union, Literal
 import os
 import io
 import chardet
