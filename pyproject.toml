@@ -11,7 +11,7 @@ authors = [
     {name = "darkpeath", email = "darkpeath@gmail.com"}
 ]
 dependencies = [
-    "chardet",
+    "chardet>=5.1.0",
     "pandas",
 ]
 
