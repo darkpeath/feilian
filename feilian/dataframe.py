@@ -83,14 +83,31 @@ def read_dataframe(file: Union[str, os.PathLike, io.IOBase], *args, sheet_name=0
 
     # detect encoding
     if encoding == 'auto' and file_format in ['csv', 'json']:
+        # read data from file
         if isinstance(file, (str, os.PathLike)):
-            encoding = detect_file_encoding(file)
-        elif isinstance(file, io.IOBase) and file.seekable():
-            tell = file.tell()
-            encoding = detect_stream_encoding(file)
-            file.seek(tell)
+            with open(file, 'rb') as f:
+                data = f.read()
         else:
-            # read file may cause content change, so we cannot detect the encoding
+            data = file.read()
+        # data may be bytes or str, try decode bytes to str
+        if isinstance(data, bytes):
+            buf = io.BytesIO(data)
+            encoding = detect_stream_encoding(buf)
+            # detect result may be incorrect, try more encodings
+            encodings = ['utf-8', 'gb18030', 'big5', 'iso-8859-1', 'cp1251', 'cp1254', 'cp936']
+            encodings = [encoding] + [x for x in encodings if x != encoding]
+            err = None
+            for encoding in encodings:
+                try:
+                    text = data.decode(encoding)
+                    break
+                except UnicodeDecodeError as e:
+                    # set as first err
+                    if err is None:
+                        err = e
+            else:
+                raise err
+            file = io.StringIO(text)
             encoding = None
 
     if file_format == 'csv':
@@ -98,10 +115,15 @@ def read_dataframe(file: Union[str, os.PathLike, io.IOBase], *args, sheet_name=0
     elif file_format == 'xlsx':
         df = pd.read_excel(file, *args, sheet_name=sheet_name, dtype=dtype, **kwargs)
     elif file_format == 'json':
+        tell = None
+        if isinstance(file, io.IOBase) and file.seekable():
+            tell = file.tell()
         try:
             df = pd.read_json(file, *args, encoding=encoding, lines=jsonl, dtype=dtype, **kwargs)
         except Exception as e:
             # if failed, try again with different arg `lines`
+            if tell is not None:
+                file.seek(tell)
             try:
                 df = pd.read_json(file, *args, lines=not jsonl, dtype=dtype, **kwargs)
             except Exception:
