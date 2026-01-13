@@ -33,7 +33,7 @@ def _is_jsonl(filepath: Union[str, os.PathLike], jsonl: bool = None) -> bool:
 def read_json(
     filepath: Union[str, os.PathLike],
     jsonl: bool = None,
-    encoding: str = 'auto',
+    encoding: str = 'utf-8',
     **kwargs
 ) -> Union[Dict[str, Any], List[Any]]:
     """

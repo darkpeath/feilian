@@ -45,7 +45,7 @@ def _infer_file_format(file) -> str:
         raise ValueError(f"Cannot infer format for type: {type(file)}")
 
 def read_dataframe(file: Union[str, os.PathLike, io.IOBase], *args, sheet_name=0,
-                   file_format: FILE_FORMAT = None, encoding='auto',
+                   file_format: FILE_FORMAT = None, encoding='utf-8',
                    jsonl=False, dtype: type = None,
                    drop_na_columns=False, drop_na_rows=False,
                    **kwargs) -> Union[pd.DataFrame, Dict[str, pd.DataFrame]]:
