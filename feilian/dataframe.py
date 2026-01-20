@@ -6,13 +6,14 @@ Encapsulate methods for pandas `DataFrame`.
 
 import io
 import os
+import json
 import pathlib
 import pandas as pd
 import random
 import collections
 from ._typing import Union, Iterable, Dict, List, Any, Sequence, Callable, Tuple, Hashable, Literal
 from .io import ensure_parent_dir_exist
-from .txt import detect_stream_encoding, detect_file_encoding
+from .txt import detect_stream_encoding, write_txt
 
 # Compatible with different pandas versions
 PD_PARAM_NEWLINE = 'lineterminator'
@@ -20,7 +21,7 @@ pd_version = [int(x) for x in pd.__version__.split('.')]
 if pd_version[0] < 1 or (pd_version[0] == 1 and pd_version[1] < 5):
     PD_PARAM_NEWLINE = 'line_terminator'
 
-FILE_FORMAT = Literal['csv', 'tsv', 'json', 'xlsx', 'parquet']
+FILE_FORMAT = Literal['csv', 'tsv', 'json', 'jsonl', 'xlsx', 'parquet']
 COMPRESSION_FORMAT = Literal[None, 'infer', 'snappy', 'gzip', 'brotli', 'bz2', 'zip', 'xz']
 
 def _drop_na_values(data: Union[pd.DataFrame, Dict[str, pd.DataFrame]], axis: Literal['columns', 'rows']):
@@ -149,6 +150,7 @@ def save_dataframe(file: Union[str, os.PathLike, 'pd.WriteBuffer[bytes]',  'pd.W
                    encoding='utf-8', newline='\n',
                    force_ascii=False,
                    orient='records', jsonl=True, indent=None,
+                   escape_forward_slashes=True,
                    column_mapper: Union[Dict[str, str], Sequence[str]] = None,
                    include_columns: Sequence[str] = None,
                    exclude_columns: Sequence[str] = None,
@@ -171,6 +173,7 @@ def save_dataframe(file: Union[str, os.PathLike, 'pd.WriteBuffer[bytes]',  'pd.W
     :param orient:              `orient` for json format
     :param jsonl:               jsonl format or not
     :param indent:              indent for json format
+    :param escape_forward_slashes:  escape forward slashes in json format
     :param column_mapper:       rename columns; if set, columns not list here will be ignored
     :param include_columns:     if set, columns not list here will be ignored
     :param exclude_columns:     if set, columns list here will be ignored
@@ -226,9 +229,22 @@ def save_dataframe(file: Union[str, os.PathLike, 'pd.WriteBuffer[bytes]',  'pd.W
             indent = None
         if orient not in ['split', 'table']:
             index = True
-        df.to_json(file, *args, compression=compression, index=index,
-                   force_ascii=force_ascii, orient=orient, lines=jsonl,
-                   indent=indent, **kwargs)
+        if escape_forward_slashes:
+            df.to_json(file, *args, compression=compression, index=index,
+                       force_ascii=force_ascii, orient=orient, lines=jsonl,
+                       indent=indent, **kwargs)
+        else:
+            s = df.to_json(compression=compression, force_ascii=force_ascii, orient=orient, lines=jsonl,
+                           indent=indent, **kwargs)
+            if '\\/' in s:
+                separators = (',', ':')
+                if jsonl:
+                    data = [json.loads(line) for line in s.strip().split(newline)]
+                    s = ''.join(json.dumps(x, ensure_ascii=force_ascii, separators=separators) + newline for x in data)
+                else:
+                    data = json.loads(s)
+                    s = json.dumps(data, ensure_ascii=force_ascii, indent=indent, separators=separators)
+            write_txt(file, s, encoding=encoding)
     elif file_format == 'parquet':
         df.to_parquet(file, *args, compression=compression, index=index, **kwargs)
     else:
