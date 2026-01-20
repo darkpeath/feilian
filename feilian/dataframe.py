@@ -111,6 +111,10 @@ def read_dataframe(file: Union[str, os.PathLike, io.IOBase], *args, sheet_name=0
             file = io.StringIO(text)
             encoding = None
 
+    # check file exists before read
+    if isinstance(file, (str, os.PathLike)) and not os.path.exists(file):
+        raise FileNotFoundError(f"File not found: {file}")
+
     if file_format == 'csv':
         df = pd.read_csv(file, *args, encoding=encoding, dtype=dtype, **kwargs)
     elif file_format == 'xlsx':
