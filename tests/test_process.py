@@ -43,9 +43,26 @@ def test_processor_no_output(tmp_path):
     res = feilian.read_dataframe(input_file)
     assert res["a"].tolist() == [1, 2, 3]
 
-def test_processor_read_args(tmp_path):
+def test_processor_progress(tmp_path):
     input_file = tmp_path / "in.csv"
     output_file = tmp_path / "out.csv"
+    _write_input(input_file, [1, 2, 3])
+    _DoubleProcessor(progress=True).run(str(input_file), str(output_file))
+    assert feilian.read_dataframe(output_file)["a"].tolist() == [2, 6]
+    _DoubleProcessor(progress="my desc").run(str(input_file), str(output_file))
+    assert feilian.read_dataframe(output_file)["a"].tolist() == [2, 6]
+
+def test_processor_write_args(tmp_path):
+    input_file = tmp_path / "in.csv"
+    output_file = tmp_path / "out.csv"
+    _write_input(input_file, [1, 3])
+    processor = _DoubleProcessor(write_args={"include_columns": ["a"]})
+    processor.run(str(input_file), str(output_file))
+    res = feilian.read_dataframe(output_file)
+    assert list(res.columns) == ["a"]
+
+def test_processor_read_args(tmp_path):
+    input_file = tmp_path / "in.csv"
     _write_input(input_file, [1, 3])
     processor = _DoubleProcessor(input_dtype=str)
     df = processor.read_data(str(input_file))

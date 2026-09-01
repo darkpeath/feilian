@@ -38,6 +38,13 @@ def test_save_excel_sheet_name(tmp_path):
     sheets = feilian.read_dataframe(path, sheet_name=None)
     assert list(sheets.keys()) == ["data"]
 
+def test_save_excel_list_of_dicts(tmp_path):
+    # a list of dicts (not DataFrames) is saved as a single sheet
+    path = tmp_path / "a.xlsx"
+    feilian.save_excel(path, [{"a": 1}, {"a": 2}])
+    df = feilian.read_dataframe(path)
+    assert df["a"].tolist() == [1, 2]
+
 def test_write_excel_alias(tmp_path):
     path = tmp_path / "a.xlsx"
     df = _df(["a", "b"])

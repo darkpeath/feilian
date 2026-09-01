@@ -106,6 +106,12 @@ def test_ensure_parent_dir_exist(tmp_path):
     # calling again on an existing dir is a no-op
     feilian.ensure_parent_dir_exist(str(path))
 
+def test_flatten_dict_prefix_and_res():
+    res = {"existing": 0}
+    out = feilian.flatten_dict({"a": {"b": 1}}, prefix="p.", res=res)
+    assert out is res
+    assert res == {"existing": 0, "p.a.b": 1}
+
 def test_string_join_values():
     from feilian.string import join_values
     assert join_values("a", "b", "c") == "abc"
