@@ -38,6 +38,11 @@ def test_detect_file_encoding(tmp_path):
     encoding = feilian.detect_file_encoding(path)
     assert encoding is not None
 
+def test_detect_text_encoding():
+    raw = "编码检测样例文本，检测器需要足够多的字节。".encode("utf-8")
+    encoding = feilian.detect_text_encoding(raw)
+    assert encoding.lower().replace("-", "") == "utf8"
+
 def test_detect_stream_encoding():
     raw = "编码检测样例文本，检测器需要足够多的字节。".encode("utf-8")
     encoding = feilian.detect_stream_encoding(io.BytesIO(raw))

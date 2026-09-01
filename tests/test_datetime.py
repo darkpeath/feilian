@@ -31,3 +31,8 @@ def test_format_time_invalid_type():
 def test_format_date():
     assert feilian.format_date(_DT) == "20260901"
     assert feilian.format_date(_DT, sep="-") == "2026-09-01"
+
+def test_format_date_with_date_object():
+    d = datetime.date(2026, 9, 1)
+    assert feilian.format_date(d) == "20260901"
+    assert feilian.format_time(d, fmt="%Y/%m/%d") == "2026/09/01"

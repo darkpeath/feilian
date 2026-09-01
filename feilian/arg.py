@@ -25,7 +25,11 @@ _NA_CONVERTER_TYPES = Union[Callable[[Any], Any], Literal['none', 'self', 'empty
 def _get_or_default(value: Any, mapping: Dict[Hashable, Any], default_key: Any) -> Any:
     if value is None:
         return mapping[default_key]
-    return mapping.get(value, value)
+    if isinstance(value, str):
+        if value not in mapping:
+            raise ValueError(f"Unknown built-in name {value!r}, should be one of {sorted(mapping)}")
+        return mapping[value]
+    return value
 
 class ArgValueParser(object):
     @classmethod

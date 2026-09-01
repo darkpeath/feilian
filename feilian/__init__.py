@@ -7,7 +7,7 @@ from .datetime import format_time, format_date
 from .arg import ArgValueParser
 from .json import read_json, save_json, write_json, read_big_json
 from .txt import (
-    detect_stream_encoding, detect_file_encoding, get_file_encoding,
+    detect_stream_encoding, detect_text_encoding, detect_file_encoding, get_file_encoding,
     read_txt, save_txt, write_txt,
 )
 from .process import DataframeProcessor
@@ -22,7 +22,7 @@ __all__ = [
     'format_time', 'format_date',
     'ArgValueParser',
     'read_json', 'save_json', 'write_json', 'read_big_json',
-    'detect_stream_encoding', 'detect_file_encoding', 'get_file_encoding',
+    'detect_stream_encoding', 'detect_text_encoding', 'detect_file_encoding', 'get_file_encoding',
     'read_txt', 'save_txt', 'write_txt',
     'save_excel', 'write_excel',
     'DataframeProcessor',

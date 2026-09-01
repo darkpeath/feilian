@@ -60,3 +60,10 @@ def test_ensure_collection_na_handling():
     assert ArgValueParser.ensure_list(None, na_checker='never_na') == [None]
     # custom callables
     assert ArgValueParser.ensure_list('', na_checker=lambda x: x == '', na_converter=lambda x: ['na']) == ['na']
+
+def test_ensure_collection_invalid_builtin_name():
+    import pytest
+    with pytest.raises(ValueError, match="Unknown built-in name"):
+        ArgValueParser.ensure_list(None, na_checker='no_such_checker')
+    with pytest.raises(ValueError, match="Unknown built-in name"):
+        ArgValueParser.ensure_list(None, na_converter='no_such_converter')
