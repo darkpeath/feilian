@@ -20,7 +20,8 @@ def _read_json(filepath: Union[str, os.PathLike], jsonl: bool, encoding='utf-8',
     encoding = get_file_encoding(filepath, encoding=encoding)
     with open(filepath, encoding=encoding) as f:
         if jsonl:
-            return [json.loads(x, **kwargs) for x in f]
+            # blank lines are allowed in a jsonl file
+            return [json.loads(x, **kwargs) for x in f if x.strip()]
         else:
             return json.load(f, **kwargs)
 
@@ -64,9 +65,9 @@ def save_json(
     An agent for `json.dump()` with some default value.
     """
     jsonl = _is_jsonl(filepath, jsonl)
-    if jsonl and not isinstance(data, list):
-        # data should be a list
-        raise ValueError("data should be a list when save as jsonl format")
+    if jsonl and isinstance(data, (dict, str, bytes)):
+        # data should be an iterable of json objects, e.g. list, tuple or generator
+        raise ValueError("data should be an iterable of objects when saved as jsonl format")
     ensure_parent_dir_exist(filepath)
     with open(filepath, 'w', encoding=encoding, newline=newline) as f:
         if jsonl:
@@ -134,9 +135,6 @@ class _JsonNode:
     def value(self):
         if not self._type:
             raise ValueError('type is not set')
-        if self._type == 'dummy':
-            assert isinstance(self._value, _JsonNode)
-            return self._value.value
         if self._type == 'map':
             assert isinstance(self._value, dict)
             return {k: v.value for k, v in self._value.items()}
@@ -149,8 +147,8 @@ class _JsonNode:
     def value(self, value):
         if not self._type:
             raise ValueError('type is not set')
-        if self._type in ['dummy', 'map', 'array']:
-            raise RuntimeError('cannot set value for dummy, map, array')
+        if self._type in ['map', 'array']:
+            raise RuntimeError('cannot set value for map, array')
         self._value = value
 
     def __repr__(self):
@@ -173,8 +171,9 @@ class StreamJsonReader(abc.ABC):
     def data_type(self):
         return self._data_type
 
+    @abc.abstractmethod
     def __iter__(self):
-        raise NotImplementedError
+        """Iterate over the top level items of the json file."""
 
 class BigJsonReader(StreamJsonReader):
     def __iter__(self):
@@ -193,7 +192,13 @@ class BigJsonReader(StreamJsonReader):
                 elif event == 'end_map':
                     node = node.parent
                 elif event == 'start_array':
-                    node.type = 'array'
+                    if node.type == 'array':
+                        # an array nested directly in another array
+                        child = _JsonNode(type='array', parent=node)
+                        node._value.append(child)
+                        node = child
+                    else:
+                        node.type = 'array'
                 elif event == 'end_array':
                     node = node.parent
                 elif event == 'map_key':
@@ -242,9 +247,14 @@ class JsonlReader(StreamJsonReader):
 
     def __iter__(self):
         with open(self.filepath, encoding=self.encoding) as f:
-            for i, line in enumerate(f, 1):
+            cnt = 0
+            for line in f:
+                # blank lines are allowed in a jsonl file
+                if not line.strip():
+                    continue
                 yield json.loads(line)
-                if i >= self.limit:
+                cnt += 1
+                if cnt >= self.limit:
                     break
 
 def read_big_json(
