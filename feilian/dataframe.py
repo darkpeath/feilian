@@ -37,7 +37,7 @@ def _infer_file_format(file) -> str:
     elif isinstance(file, str):
         return os.path.splitext(file)[1].lower()[1:]
     elif isinstance(file, pathlib.PurePath):
-        suf = file.suffix
+        suf = file.suffix.lower()
         return suf[1:] if suf.startswith('.') else suf
     elif isinstance(file, os.PathLike):
         return os.path.splitext(os.fspath(file))[1].lower().lstrip('.')
@@ -95,7 +95,7 @@ def read_dataframe(file: Union[str, os.PathLike, io.IOBase], *args, sheet_name=0
             encoding = detect_stream_encoding(buf)
             # detect result may be incorrect, try more encodings
             encodings = ['utf-8', 'gb18030', 'big5', 'iso-8859-1', 'cp1251', 'cp1254', 'cp936']
-            encodings = [encoding] + [x for x in encodings if x != encoding]
+            encodings = ([encoding] if encoding else []) + [x for x in encodings if x != encoding]
             err = None
             for encoding in encodings:
                 try:
@@ -108,6 +108,11 @@ def read_dataframe(file: Union[str, os.PathLike, io.IOBase], *args, sheet_name=0
             else:
                 raise err
             file = io.StringIO(text)
+            encoding = None
+        else:
+            # data read from a text stream is already decoded,
+            # wrap it so the exhausted stream is not passed to pandas
+            file = io.StringIO(data)
             encoding = None
 
     if file_format == 'csv':
@@ -131,7 +136,7 @@ def read_dataframe(file: Union[str, os.PathLike, io.IOBase], *args, sheet_name=0
     elif file_format == 'parquet':
         df = pd.read_parquet(file, *args, **kwargs)
     else:
-        raise IOError(f"Unknown file format: {file}")
+        raise IOError(f"Unknown file format '{file_format}' for file: {file}")
 
     if drop_na_columns:
         _drop_na_values(df, axis='columns')
@@ -224,15 +229,17 @@ def save_dataframe(file: Union[str, os.PathLike, 'pd.WriteBuffer[bytes]',  'pd.W
         if jsonl:
             orient = 'records'
             indent = None
-        if orient not in ['split', 'table']:
-            index = True
-        df.to_json(file, *args, compression=compression, index=index,
+        # pandas only accepts the `index` arg for some orients,
+        # e.g. pandas 2.x raises an error for orient='records' with index=True
+        if orient in ['split', 'table']:
+            kwargs['index'] = index
+        df.to_json(file, *args, compression=compression,
                    force_ascii=force_ascii, orient=orient, lines=jsonl,
                    indent=indent, **kwargs)
     elif file_format == 'parquet':
         df.to_parquet(file, *args, compression=compression, index=index, **kwargs)
     else:
-        raise IOError(f"Unknown file format: {file}")
+        raise IOError(f"Unknown file format '{file_format}' for file: {file}")
 
 def iter_dataframe(data: pd.DataFrame,
                    progress_bar: Union[bool, str, 'tqdm', Callable[[Iterable[Any]], 'tqdm']] = False
@@ -286,23 +293,27 @@ def extract_dataframe_sample(data: pd.DataFrame,
     raise ValueError("Param 'return_format' should be one of {'dataframe', 'list'}.")
 
 def is_empty_text(s: str) -> bool:
-    return pd.isna(s) or not s
+    return bool(pd.isna(s) or not s)
 
 def is_nonempty_text(s: str) -> bool:
-    return pd.notna(s) and isinstance(s, str) and s
+    return bool(pd.notna(s) and isinstance(s, str) and s)
 
 def is_blank_text(s: str) -> bool:
-    return pd.isna(s) or isinstance(s, str) and not s.strip()
+    return bool(pd.isna(s) or isinstance(s, str) and not s.strip())
 
 def is_non_blank_text(s: str) -> bool:
-    return pd.notna(s) and isinstance(s, str) and s.strip()
+    return bool(pd.notna(s) and isinstance(s, str) and s.strip())
 
-def join_values(values: Sequence[Any], sep=None) -> str:
+def join_values(values: Sequence[Any], sep: str = None) -> Union[str, Sequence[Any]]:
+    """
+    join values to a single string with the given seperator;
+    if `sep` is `None`, multi values are returned as the original sequence
+    """
     if not values:
         return ''
     if len(values) == 1:
         return str(values[0])
-    return sep.join(map(str, values)) if sep else values
+    return sep.join(map(str, values)) if sep is not None else values
 
 def merge_dataframe_rows(data: pd.DataFrame, col_id='ID', na=None, join_sep=None, progress_bar=False) -> pd.DataFrame:
     """
