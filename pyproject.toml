@@ -10,9 +10,12 @@ readme = "README.md"
 authors = [
     {name = "darkpeath", email = "darkpeath@gmail.com"}
 ]
+requires-python = ">=3.7"
 dependencies = [
     "chardet",
     "pandas",
+    "typing_extensions; python_version < '3.8'",
+    "importlib_metadata; python_version < '3.8'",
 ]
 
 [project.optional-dependencies]
