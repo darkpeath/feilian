@@ -6,7 +6,13 @@ import chardet
 
 _DEFAULT_CHUNK_SIZE = 1024
 
-if 'should_rename_legacy' in inspect.signature(chardet.UniversalDetector).parameters:
+# Compatible with different chardet versions:
+# newer versions deprecate `should_rename_legacy` in favor of `prefer_superset`
+_DETECTOR_PARAMS = inspect.signature(chardet.UniversalDetector).parameters
+if 'prefer_superset' in _DETECTOR_PARAMS:
+    def _create_detector(should_rename_legacy: bool):
+        return chardet.UniversalDetector(prefer_superset=should_rename_legacy)
+elif 'should_rename_legacy' in _DETECTOR_PARAMS:
     def _create_detector(should_rename_legacy: bool):
         return chardet.UniversalDetector(should_rename_legacy=should_rename_legacy)
 else:
@@ -41,7 +47,8 @@ def read_txt(path: Union[str, os.PathLike], encoding: Union[None, Literal['auto'
     if encoding == 'auto':
         with open(path, 'rb') as f:
             raw = f.read()
-        encoding = detect_stream_encoding(io.BytesIO(raw))
+        # detection may fail and return `None`, fallback to utf-8
+        encoding = detect_stream_encoding(io.BytesIO(raw)) or 'utf-8'
         return raw.decode(encoding)
     with open(path, 'r', encoding=encoding) as f:
         return f.read()
