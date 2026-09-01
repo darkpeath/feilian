@@ -1,5 +1,4 @@
 import abc
-import tqdm
 import pandas as pd
 from ._typing import (
     Any, Dict, Hashable, List,
@@ -91,8 +90,10 @@ class DataframeProcessor(BaseProcessor, abc.ABC):
     def process(self, data: pd.DataFrame) -> pd.DataFrame:
         bar = data.iterrows()
         if self.progress:
+            # tqdm is an optional dependency, import it only when needed
+            from tqdm import tqdm
             desc = "process" if self.progress is True else self.progress
-            bar = tqdm.tqdm(bar, total=len(data), desc=desc)
+            bar = tqdm(bar, total=len(data), desc=desc)
         res = (self.process_row(i, row) for i, row in bar)
         res = (x for x in res if x is not None)
         return pd.DataFrame(res)
