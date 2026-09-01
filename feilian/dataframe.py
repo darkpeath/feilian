@@ -6,22 +6,38 @@ Encapsulate methods for pandas `DataFrame`.
 
 import io
 import os
-import pathlib
+import re
 import pandas as pd
 import random
 import collections
-from ._typing import Union, Iterable, Dict, List, Any, Sequence, Callable, Tuple, Hashable, Literal
+from ._typing import Union, Iterable, Dict, List, Any, Sequence, Callable, Tuple, Hashable, Literal, TYPE_CHECKING
 from .io import ensure_parent_dir_exist
-from .txt import detect_stream_encoding, detect_file_encoding
+from .txt import detect_stream_encoding
+
+if TYPE_CHECKING:
+    from tqdm import tqdm
+
+def _parse_version(version: str) -> List[int]:
+    """
+    Parse major and minor version numbers,
+    tolerating pre-release suffixes such as '2.1.0rc0' or '3.0.0.dev0'.
+    """
+    nums = [int(x) for x in re.findall(r'\d+', version)[:2]]
+    while len(nums) < 2:
+        nums.append(0)
+    return nums
 
 # Compatible with different pandas versions
 PD_PARAM_NEWLINE = 'lineterminator'
-pd_version = [int(x) for x in pd.__version__.split('.')]
+pd_version = _parse_version(pd.__version__)
 if pd_version[0] < 1 or (pd_version[0] == 1 and pd_version[1] < 5):
     PD_PARAM_NEWLINE = 'line_terminator'
 
-FILE_FORMAT = Literal['csv', 'tsv', 'json', 'xlsx', 'parquet']
+FILE_FORMAT = Literal['csv', 'tsv', 'json', 'jsonl', 'xlsx', 'parquet']
 COMPRESSION_FORMAT = Literal[None, 'infer', 'snappy', 'gzip', 'brotli', 'bz2', 'zip', 'xz']
+
+# compressed file suffixes supported by pandas
+_COMPRESSION_SUFFIXES = {'gz', 'bz2', 'zip', 'xz', 'zst'}
 
 def _drop_na_values(data: Union[pd.DataFrame, Dict[str, pd.DataFrame]], axis: Literal['columns', 'rows']):
     if isinstance(data, pd.DataFrame):
@@ -31,22 +47,26 @@ def _drop_na_values(data: Union[pd.DataFrame, Dict[str, pd.DataFrame]], axis: Li
         for df in data.values():
             df.dropna(axis=axis, how='all', inplace=True)
 
+def _has_compression_suffix(file: Union[str, os.PathLike]) -> bool:
+    ext = os.path.splitext(os.fspath(file))[1].lower().lstrip('.')
+    return ext in _COMPRESSION_SUFFIXES
+
 def _infer_file_format(file) -> str:
     if isinstance(file, pd.ExcelWriter):
         return 'xlsx'
-    elif isinstance(file, str):
-        return os.path.splitext(file)[1].lower()[1:]
-    elif isinstance(file, pathlib.PurePath):
-        suf = file.suffix.lower()
-        return suf[1:] if suf.startswith('.') else suf
-    elif isinstance(file, os.PathLike):
-        return os.path.splitext(os.fspath(file))[1].lower().lstrip('.')
+    elif isinstance(file, (str, os.PathLike)):
+        base, ext = os.path.splitext(os.fspath(file))
+        ext = ext.lower().lstrip('.')
+        if ext in _COMPRESSION_SUFFIXES:
+            # e.g. 'data.csv.gz' should be inferred as csv
+            ext = os.path.splitext(base)[1].lower().lstrip('.')
+        return ext
     else:
         raise ValueError(f"Cannot infer format for type: {type(file)}")
 
 def read_dataframe(file: Union[str, os.PathLike, io.IOBase], *args, sheet_name=0,
                    file_format: FILE_FORMAT = None, encoding='utf-8',
-                   jsonl=False, dtype: type = None,
+                   jsonl=False, dtype: Union[type, str, Dict[str, Any]] = None,
                    drop_na_columns=False, drop_na_rows=False,
                    **kwargs) -> Union[pd.DataFrame, Dict[str, pd.DataFrame]]:
     """
@@ -54,7 +74,7 @@ def read_dataframe(file: Union[str, os.PathLike, io.IOBase], *args, sheet_name=0
     :param file:        the file to be read
     :param args:        extra args for `pd.read_xx()`
     :param sheet_name:      `sheet_name` for `pd.read_excel()`
-    :param file_format:     csv, tsv, json ,xlsx, parquet
+    :param file_format:     csv, tsv, json, jsonl, xlsx, parquet
     :param encoding:    text file encoding
     :param jsonl:       jsonl format or not, only used in json format
     :param dtype:       `dtype` for `pd.read_xx()`
@@ -83,37 +103,42 @@ def read_dataframe(file: Union[str, os.PathLike, io.IOBase], *args, sheet_name=0
 
     # detect encoding
     if encoding == 'auto' and file_format in ['csv', 'json']:
-        # read data from file
-        if isinstance(file, (str, os.PathLike)):
-            with open(file, 'rb') as f:
-                data = f.read()
+        if isinstance(file, (str, os.PathLike)) and _has_compression_suffix(file):
+            # encoding of a compressed file cannot be detected from its raw bytes,
+            # let pandas decompress and decode with the default encoding
+            encoding = None
         else:
-            data = file.read()
-        # data may be bytes or str, try decode bytes to str
-        if isinstance(data, bytes):
-            buf = io.BytesIO(data)
-            encoding = detect_stream_encoding(buf)
-            # detect result may be incorrect, try more encodings
-            encodings = ['utf-8', 'gb18030', 'big5', 'iso-8859-1', 'cp1251', 'cp1254', 'cp936']
-            encodings = ([encoding] if encoding else []) + [x for x in encodings if x != encoding]
-            err = None
-            for encoding in encodings:
-                try:
-                    text = data.decode(encoding)
-                    break
-                except UnicodeDecodeError as e:
-                    # set as first err
-                    if err is None:
-                        err = e
+            # read data from file
+            if isinstance(file, (str, os.PathLike)):
+                with open(file, 'rb') as f:
+                    data = f.read()
             else:
-                raise err
-            file = io.StringIO(text)
-            encoding = None
-        else:
-            # data read from a text stream is already decoded,
-            # wrap it so the exhausted stream is not passed to pandas
-            file = io.StringIO(data)
-            encoding = None
+                data = file.read()
+            # data may be bytes or str, try decode bytes to str
+            if isinstance(data, bytes):
+                buf = io.BytesIO(data)
+                encoding = detect_stream_encoding(buf)
+                # detect result may be incorrect, try more encodings
+                encodings = ['utf-8', 'gb18030', 'big5', 'iso-8859-1', 'cp1251', 'cp1254', 'cp936']
+                encodings = ([encoding] if encoding else []) + [x for x in encodings if x != encoding]
+                err = None
+                for encoding in encodings:
+                    try:
+                        text = data.decode(encoding)
+                        break
+                    except UnicodeDecodeError as e:
+                        # set as first err
+                        if err is None:
+                            err = e
+                else:
+                    raise err
+                file = io.StringIO(text)
+                encoding = None
+            else:
+                # data read from a text stream is already decoded,
+                # wrap it so the exhausted stream is not passed to pandas
+                file = io.StringIO(data)
+                encoding = None
 
     if file_format == 'csv':
         df = pd.read_csv(file, *args, encoding=encoding, dtype=dtype, **kwargs)
@@ -130,7 +155,7 @@ def read_dataframe(file: Union[str, os.PathLike, io.IOBase], *args, sheet_name=0
             if tell is not None:
                 file.seek(tell)
             try:
-                df = pd.read_json(file, *args, lines=not jsonl, dtype=dtype, **kwargs)
+                df = pd.read_json(file, *args, encoding=encoding, lines=not jsonl, dtype=dtype, **kwargs)
             except Exception:
                 raise e
     elif file_format == 'parquet':
@@ -164,7 +189,7 @@ def save_dataframe(file: Union[str, os.PathLike, 'pd.WriteBuffer[bytes]',  'pd.W
     :param df:                  the data
     :param args:                extra args for df.to_xx()
     :param sheet_name:          `sheet_name` for excel format
-    :param file_format:         csv, tsv, json, xlsx, parquet
+    :param file_format:         csv, tsv, json, jsonl, xlsx, parquet
     :param compression:         name of the compression to use.
                                 use `None` for no compression.
     :param index:               save index or not, see docs in df.to_csv();
@@ -204,6 +229,11 @@ def save_dataframe(file: Union[str, os.PathLike, 'pd.WriteBuffer[bytes]',  'pd.W
     # ensure parent dir exists
     if isinstance(file, (str, os.PathLike)):
         ensure_parent_dir_exist(file)
+        # let pandas infer the compression from a compressed suffix, e.g. 'data.csv.gz';
+        # only for text formats, 'infer' is not a valid compression for parquet
+        if compression is None and file_format in ('csv', 'tsv', 'json', 'jsonl') \
+                and _has_compression_suffix(file):
+            compression = 'infer'
 
     # compatible for set index just use arg `index`
     if index_label is None and isinstance(index, str):
@@ -317,7 +347,8 @@ def join_values(values: Sequence[Any], sep: str = None) -> Union[str, Sequence[A
 
 def merge_dataframe_rows(data: pd.DataFrame, col_id='ID', na=None, join_sep=None, progress_bar=False) -> pd.DataFrame:
     """
-    merge rows of same id to one row, similar to group by in sql
+    merge rows of same id to one row, similar to group by in sql;
+    rows whose id is na are skipped, same as pandas `groupby()`
     :param data:            original data
     :param col_id:          column name for the id col
     :param na:              values to be treated as na
@@ -334,6 +365,8 @@ def merge_dataframe_rows(data: pd.DataFrame, col_id='ID', na=None, join_sep=None
     rows = iter_dataframe(data, progress_bar=progress_bar)
     for i, row in rows:
         eid = row[col_id]
+        if pd.isna(eid) or eid in na:
+            continue
         for k, v in row.items():
             if pd.notna(v) and v not in na:
                 counts[eid][k][v] += 1
