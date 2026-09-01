@@ -10,7 +10,7 @@ from .io import ensure_parent_dir_exist
 from .txt import get_file_encoding
 try:
     import ijson
-except ImportError as e:
+except ImportError:
     ijson = None
 
 def _read_json(filepath: Union[str, os.PathLike], jsonl: bool, encoding='utf-8', **kwargs):
@@ -42,8 +42,9 @@ def read_json(
     jsonl = _is_jsonl(filepath, jsonl)
     try:
         return _read_json(filepath, jsonl=jsonl, encoding=encoding, **kwargs)
-    except Exception as e:
-        # if failed, try again with different arg `jsonl`
+    except (json.JSONDecodeError, UnicodeDecodeError) as e:
+        # if parsing failed, try again with different arg `jsonl`;
+        # other errors (e.g. file not found) are raised directly
         try:
             return _read_json(filepath, jsonl=not jsonl, encoding=encoding, **kwargs)
         except Exception:
@@ -250,13 +251,21 @@ def read_big_json(
     filepath: Union[str, os.PathLike],
     jsonl: bool = None,
     encoding: str = 'auto',
+    limit: int = float('inf'),
 ) -> StreamJsonReader:
+    """
+    Read a json file as a stream reader.
+    :param filepath:    the json file
+    :param jsonl:       jsonl format or not, inferred from the file suffix if not given
+    :param encoding:    text file encoding, 'auto' to detect automatically
+    :param limit:       max item count to iterate
+    """
     jsonl = _is_jsonl(filepath, jsonl)
     encoding = get_file_encoding(filepath, encoding=encoding)
     if jsonl:
-        return JsonlReader(filepath, encoding=encoding)
+        return JsonlReader(filepath, encoding=encoding, limit=limit)
     else:
         if ijson is None:
             raise ImportError('ijson is not installed')
-        return BigJsonReader(filepath)
+        return BigJsonReader(filepath, limit=limit)
 
