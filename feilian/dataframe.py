@@ -7,12 +7,13 @@ Encapsulate methods for pandas `DataFrame`.
 import io
 import os
 import re
+import json
 import pandas as pd
 import random
 import collections
 from ._typing import Union, Iterable, Dict, List, Any, Sequence, Callable, Tuple, Hashable, Literal, TYPE_CHECKING
 from .io import ensure_parent_dir_exist
-from .txt import detect_stream_encoding
+from .txt import detect_stream_encoding, write_txt
 
 if TYPE_CHECKING:
     from tqdm import tqdm
@@ -140,6 +141,10 @@ def read_dataframe(file: Union[str, os.PathLike, io.IOBase], *args, sheet_name=0
                 file = io.StringIO(data)
                 encoding = None
 
+    # check file exists before read
+    if isinstance(file, (str, os.PathLike)) and not os.path.exists(file):
+        raise FileNotFoundError(f"File not found: {file}")
+
     if file_format == 'csv':
         df = pd.read_csv(file, *args, encoding=encoding, dtype=dtype, **kwargs)
     elif file_format == 'xlsx':
@@ -179,6 +184,7 @@ def save_dataframe(file: Union[str, os.PathLike, 'pd.WriteBuffer[bytes]',  'pd.W
                    encoding='utf-8', newline='\n',
                    force_ascii=False,
                    orient='records', jsonl=True, indent=None,
+                   escape_forward_slashes=True,
                    column_mapper: Union[Dict[str, str], Sequence[str]] = None,
                    include_columns: Sequence[str] = None,
                    exclude_columns: Sequence[str] = None,
@@ -201,6 +207,7 @@ def save_dataframe(file: Union[str, os.PathLike, 'pd.WriteBuffer[bytes]',  'pd.W
     :param orient:              `orient` for json format
     :param jsonl:               jsonl format or not
     :param indent:              indent for json format
+    :param escape_forward_slashes:  escape forward slashes in json format
     :param column_mapper:       rename columns; if set, columns not list here will be ignored
     :param include_columns:     if set, columns not list here will be ignored
     :param exclude_columns:     if set, columns list here will be ignored
@@ -263,9 +270,22 @@ def save_dataframe(file: Union[str, os.PathLike, 'pd.WriteBuffer[bytes]',  'pd.W
         # e.g. pandas 2.x raises an error for orient='records' with index=True
         if orient in ['split', 'table']:
             kwargs['index'] = index
-        df.to_json(file, *args, compression=compression,
-                   force_ascii=force_ascii, orient=orient, lines=jsonl,
-                   indent=indent, **kwargs)
+        if escape_forward_slashes:
+            df.to_json(file, *args, compression=compression,
+                       force_ascii=force_ascii, orient=orient, lines=jsonl,
+                       indent=indent, **kwargs)
+        else:
+            s = df.to_json(compression=compression, force_ascii=force_ascii, orient=orient, lines=jsonl,
+                           indent=indent, **kwargs)
+            if '\\/' in s:
+                separators = (',', ':')
+                if jsonl:
+                    data = [json.loads(line) for line in s.strip().split(newline)]
+                    s = ''.join(json.dumps(x, ensure_ascii=force_ascii, separators=separators) + newline for x in data)
+                else:
+                    data = json.loads(s)
+                    s = json.dumps(data, ensure_ascii=force_ascii, indent=indent, separators=separators)
+            write_txt(file, s, encoding=encoding)
     elif file_format == 'parquet':
         df.to_parquet(file, *args, compression=compression, index=index, **kwargs)
     else:

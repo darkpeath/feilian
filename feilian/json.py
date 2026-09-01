@@ -3,6 +3,7 @@
 from typing import Dict, List, Union, Any
 from pathlib import Path
 import os
+import io
 import abc
 import json
 from decimal import Decimal
@@ -52,7 +53,7 @@ def read_json(
             raise e
 
 def save_json(
-    filepath: Union[str, os.PathLike],
+    filepath: Union[str, os.PathLike, io.TextIOBase],
     data: Union[Dict[str, Any], List[Any]],
     jsonl: bool = None,
     encoding: str = 'utf-8',
@@ -69,13 +70,22 @@ def save_json(
         # data should be an iterable of json objects, e.g. list, tuple or generator
         raise ValueError("data should be an iterable of objects when saved as jsonl format")
     ensure_parent_dir_exist(filepath)
-    with open(filepath, 'w', encoding=encoding, newline=newline) as f:
+    if isinstance(filepath, (str, os.PathLike)):
+        f = open(filepath, 'w', encoding=encoding, newline=newline)
+        should_close = True
+    else:
+        f = filepath
+        should_close = False
+    try:
         if jsonl:
             for x in data:
                 f.write(json.dumps(x, ensure_ascii=ensure_ascii, **kwargs))
                 f.write(newline)
         else:
             json.dump(data, f, indent=indent, ensure_ascii=ensure_ascii, **kwargs)
+    finally:
+        if should_close:
+            f.close()
 
 def write_json(
     filepath: Union[str, os.PathLike],

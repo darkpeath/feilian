@@ -56,9 +56,20 @@ def read_txt(path: Union[str, os.PathLike], encoding: Union[None, Literal['auto'
     with open(path, 'r', encoding=encoding) as f:
         return f.read()
 
-def save_txt(path: Union[str, os.PathLike], content: str, encoding: str = 'utf-8'):
-    with open(path, 'w', encoding=encoding) as f:
+def save_txt(path: Union[str, os.PathLike, io.IOBase], content: str, encoding: str = 'utf-8'):
+    if isinstance(path, (str, os.PathLike)):
+        f = open(path, 'w', encoding=encoding)
+        should_close = True
+    else:
+        if isinstance(path, io.BytesIO):
+            content = content.encode(encoding)
+        f = path
+        should_close = False
+    try:
         f.write(content)
+    finally:
+        if should_close:
+            f.close()
 
 def write_txt(path: Union[str, os.PathLike], content: str, encoding: str = 'utf-8'):
     save_txt(path=path, content=content, encoding=encoding)
