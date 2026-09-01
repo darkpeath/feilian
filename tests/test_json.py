@@ -45,3 +45,23 @@ def test_read_big_jsonl():
     g = feilian.read_big_json(path)
     d = list(g)
     assert d == a
+
+def test_read_big_json_limit():
+    path = Path(__file__).parent.joinpath("a.jsonl")
+    g = feilian.read_big_json(path, limit=2)
+    assert list(g) == a[:2]
+    path = Path(__file__).parent.joinpath("b.json")
+    g = feilian.read_big_json(path, limit=1)
+    assert dict(g) == {"a1": b["a1"]}
+
+def test_read_json_missing_file():
+    import pytest
+    path = Path(__file__).parent.joinpath("no_such_file.json")
+    with pytest.raises(FileNotFoundError):
+        feilian.read_json(path)
+
+def test_save_and_read_json(tmp_path):
+    for name in ["data.json", "data.jsonl"]:
+        path = tmp_path / name
+        feilian.save_json(path, a)
+        assert feilian.read_json(path) == a
