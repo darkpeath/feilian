@@ -48,7 +48,7 @@ import feilian
 import pandas as pd
 
 df = pd.DataFrame(dict(a=[1, 2, 3], b=[4, 5, 6]))
-sample = feilian.extract_dataframe_sample(size=2, shuffle=True)
+sample = feilian.extract_dataframe_sample(df, filter_func=lambda row: row['a'] > 1, size=2, shuffle=True)
 ```
 
 #### Test text value in dataframe
@@ -108,7 +108,7 @@ data = [
     {"a": "1", "b": 8, "c": "9"},
 ]
 output_file = ''
-feilian.save_dataframe(output_file, data)
+feilian.save_json(output_file, data)
 ```
 
 ### Datetime format
