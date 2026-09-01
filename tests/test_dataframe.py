@@ -24,9 +24,12 @@ def test_read_auto_encoding_from_text_stream():
     assert len(df) == 2
 
 def test_read_auto_encoding_from_bytes_stream():
-    buf = io.BytesIO('a,b\n中文,2\n'.encode('gb18030'))
+    # the sample must be long enough for the encoding detection to be reliable
+    rows = ''.join(f'中文内容示例第{i}行,这是用于编码检测的较长文本\n' for i in range(20))
+    buf = io.BytesIO(f'a,b\n{rows}'.encode('gb18030'))
     df = feilian.read_dataframe(buf, file_format='csv', encoding='auto')
-    assert df['a'].tolist() == ['中文']
+    assert len(df) == 20
+    assert df['a'].tolist()[0] == '中文内容示例第0行'
 
 def test_save_and_read(tmp_path):
     df = pd.DataFrame(dict(a=[1, 2, 3], b=['x', 'y', 'z']))
